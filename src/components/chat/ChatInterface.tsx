@@ -191,12 +191,13 @@ export default function ChatInterface({
         }
       } catch (err) {
         console.error("[chat]", err);
+        const msg = err instanceof Error ? err.message : "Something went wrong. Please try again.";
         setMessages((prev) => [
           ...prev,
           {
             id: `err-${Date.now()}`,
             role: "assistant",
-            content: "Something went wrong. Please try again.",
+            content: `⚠️ ${msg}`,
             created_at: new Date().toISOString(),
           },
         ]);

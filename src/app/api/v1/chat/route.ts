@@ -3,7 +3,6 @@ import { validateApiKey } from "@/lib/api/auth";
 import { error, ok } from "@/lib/api/response";
 import { runAgentStream } from "@/lib/anthropic/agent";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Edge runtime: no timeout limit, full streaming support on Netlify
 export const runtime = "edge";
