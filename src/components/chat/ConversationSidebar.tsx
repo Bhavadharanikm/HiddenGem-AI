@@ -16,6 +16,7 @@ type Props = {
   clients: Client[];
   selectedClient: Client | null;
   onClientChange: (client: Client) => void;
+  onSettingsOpen: () => void;
 };
 
 const NAV_ITEMS = [
@@ -29,6 +30,7 @@ export default function ConversationSidebar({
   clients,
   selectedClient,
   onClientChange,
+  onSettingsOpen,
 }: Props) {
   return (
     <aside
@@ -107,7 +109,10 @@ export default function ConversationSidebar({
 
       {/* Settings at bottom */}
       <div className="px-2 mb-3">
-        <button className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-left transition-colors border-l-[2px] border-transparent hover:bg-white/[0.03] text-[#aaa] hover:text-[#e0e0e0] text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0c0c0c]">
+        <button
+          onClick={onSettingsOpen}
+          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-left transition-colors border-l-[2px] border-transparent hover:bg-white/[0.03] text-[#aaa] hover:text-[#e0e0e0] text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0c0c0c]"
+        >
           <Settings size={14} className="flex-shrink-0 text-current" strokeWidth={1.75} />
           Settings
         </button>

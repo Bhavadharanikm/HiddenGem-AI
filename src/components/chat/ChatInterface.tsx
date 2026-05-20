@@ -8,6 +8,7 @@ import ConversationHistory from "./ConversationHistory";
 import MessageBubble from "./MessageBubble";
 import ToolActivityIndicator from "./ToolActivityIndicator";
 import ChatInput from "./ChatInput";
+import SettingsModal from "@/components/settings/SettingsModal";
 
 export type Client = {
   id: string;
@@ -51,6 +52,7 @@ export default function ChatInterface({
   const [isLoading, setIsLoading] = useState(false);
   const [leftNavOpen, setLeftNavOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -230,6 +232,7 @@ export default function ChatInterface({
           clients={initialClients}
           selectedClient={selectedClient}
           onClientChange={handleClientChange}
+          onSettingsOpen={() => setSettingsOpen(true)}
         />
       </div>
 
@@ -339,6 +342,8 @@ export default function ChatInterface({
           onNew={handleNewConversation}
         />
       </div>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

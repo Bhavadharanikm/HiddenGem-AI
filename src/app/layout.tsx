@@ -25,6 +25,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "HiddenGem AI",
   description: "Intelligent client assistant platform",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+  },
 };
 
 export default function RootLayout({
