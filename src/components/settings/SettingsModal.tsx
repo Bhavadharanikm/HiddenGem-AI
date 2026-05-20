@@ -108,7 +108,7 @@ function WizardProgressBar({ step }: { step: WizardStep }) {
                 ? "bg-[#FAC515] text-black"
                 : i === step
                 ? "bg-[#FAC515]/15 text-[#FAC515] ring-1 ring-[#FAC515]/40"
-                : "bg-white/[0.05] text-[#444]"
+                : "bg-white/[0.05] text-[#666]"
             )}
           >
             {i < step ? <Check size={10} strokeWidth={3} /> : i + 1}
@@ -262,16 +262,16 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
       {/* Step header */}
       <div className="flex items-start justify-between mb-5 flex-shrink-0">
         <div>
-          <p className="text-[10px] text-[#555] uppercase tracking-wider">
+          <p className="text-[10px] text-[#777] uppercase tracking-wider">
             Step {step + 1} of {WIZARD_STEPS.length}
           </p>
           <h2 className="text-[15px] font-semibold text-[#f0f0ef] mt-0.5">{stepLabel}</h2>
-          <p className="text-[12px] text-[#666] mt-0.5">{stepSubtitle}</p>
+          <p className="text-[12px] text-[#888] mt-0.5">{stepSubtitle}</p>
         </div>
         {step > 0 && step < 4 && (
           <button
             onClick={back}
-            className="flex items-center gap-0.5 text-[11px] text-[#555] hover:text-[#888] transition-colors flex-shrink-0 ml-4 mt-1"
+            className="flex items-center gap-0.5 text-[11px] text-[#777] hover:text-[#aaa] transition-colors flex-shrink-0 ml-4 mt-1"
           >
             <ChevronLeft size={12} />
             Back
@@ -286,14 +286,14 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
         {step === 0 && (
           <div className="space-y-4">
             <div>
-              <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">
+              <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">
                 Client name
               </label>
               <input
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="e.g. Paradise Point"
-                className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors"
+                className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors"
               />
             </div>
             {createError && (
@@ -310,15 +310,15 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                 {docs.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[#111] border border-white/[0.05]"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-[#1a1a1a] border border-white/[0.10]"
                   >
-                    <FileText size={13} className="text-[#888] flex-shrink-0" />
+                    <FileText size={13} className="text-[#aaa] flex-shrink-0" />
                     <span className="text-[12px] text-[#d8d8d8] truncate flex-1">
                       {doc.name}
                     </span>
                     <button
                       onClick={() => handleRemoveDoc(doc.id)}
-                      className="p-1 text-[#555] hover:text-[#ef4444] transition-colors flex-shrink-0"
+                      className="p-1 text-[#777] hover:text-[#ef4444] transition-colors flex-shrink-0"
                       aria-label={`Remove ${doc.name}`}
                     >
                       <Trash2 size={12} />
@@ -328,7 +328,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
               </div>
             )}
             <div>
-              <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">
+              <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">
                 Google Drive URL
               </label>
               <input
@@ -336,20 +336,20 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                 onChange={(e) => setDriveUrl(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddDoc()}
                 placeholder="https://docs.google.com/..."
-                className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors"
+                className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors"
               />
             </div>
             <div>
-              <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">
+              <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">
                 Document name{" "}
-                <span className="normal-case text-[#555]">(optional)</span>
+                <span className="normal-case text-[#777]">(optional)</span>
               </label>
               <input
                 value={docName}
                 onChange={(e) => setDocName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddDoc()}
                 placeholder="e.g. Brand Guidelines"
-                className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors"
+                className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors"
               />
             </div>
             {addError && (
@@ -358,7 +358,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
             <button
               onClick={handleAddDoc}
               disabled={adding || !driveUrl.trim()}
-              className="flex items-center gap-1.5 text-[12px] border border-white/[0.08] hover:border-white/[0.15] disabled:opacity-40 disabled:cursor-not-allowed text-[#ccc] px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-[12px] border border-white/[0.14] hover:border-white/[0.15] disabled:opacity-40 disabled:cursor-not-allowed text-[#ccc] px-3 py-1.5 rounded-lg transition-colors"
             >
               {adding
                 ? <Loader2 size={11} className="animate-spin" />
@@ -381,7 +381,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
             ) : (
               <>
                 <div>
-                  <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">
+                  <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">
                     Provider
                   </label>
                   <select
@@ -390,7 +390,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                       setProvider(e.target.value as PmsProvider);
                       setCredentials({});
                     }}
-                    className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] outline-none focus:border-[#FAC515]/40 transition-colors appearance-none"
+                    className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] outline-none focus:border-[#FAC515]/40 transition-colors appearance-none"
                   >
                     {PMS_PROVIDERS.map((p) => (
                       <option key={p.value} value={p.value}>
@@ -401,7 +401,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                 </div>
                 {getCredentialFields(provider).map((field) => (
                   <div key={field.key}>
-                    <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">
+                    <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">
                       {field.label}
                     </label>
                     <input
@@ -414,7 +414,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                         }))
                       }
                       placeholder={`Enter ${field.label}`}
-                      className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors"
+                      className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors"
                     />
                   </div>
                 ))}
@@ -439,10 +439,10 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
         {/* ── Step 3: Meta Ads ── */}
         {step === 3 && createdClient && (
           <div className="space-y-4">
-            <div className="bg-[#111] border border-white/[0.05] rounded-xl p-4 space-y-3">
+            <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#555]" />
-                <span className="text-[12px] text-[#888]">Not connected</span>
+                <span className="text-[12px] text-[#aaa]">Not connected</span>
               </div>
               <a
                 href={`/api/v1/meta-ads/connect?tenant_id=${createdClient.id}`}
@@ -450,7 +450,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
               >
                 Connect Meta Account
               </a>
-              <p className="text-[11px] text-[#555]">
+              <p className="text-[11px] text-[#777]">
                 Connecting will redirect you to Meta to authorise access.
                 You can also connect later from the Meta Ads tab.
               </p>
@@ -469,7 +469,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                 <p className="text-[14px] font-semibold text-[#f0f0ef]">
                   {createdClient.name}
                 </p>
-                <p className="text-[11px] text-[#555] font-mono">
+                <p className="text-[11px] text-[#777] font-mono">
                   {createdClient.slug}
                 </p>
               </div>
@@ -516,7 +516,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                   </div>
                   <span className="text-[12px] text-[#d8d8d8]">{label}</span>
                   {detail && (
-                    <span className="text-[11px] text-[#555]">— {detail}</span>
+                    <span className="text-[11px] text-[#777]">— {detail}</span>
                   )}
                 </div>
               ))}
@@ -526,12 +526,12 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/[0.05] flex-shrink-0">
+      <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/[0.10] flex-shrink-0">
         {step === 0 && (
           <>
             <button
               onClick={onCancel}
-              className="flex items-center gap-1 text-[12px] text-[#555] hover:text-[#888] transition-colors"
+              className="flex items-center gap-1 text-[12px] text-[#777] hover:text-[#aaa] transition-colors"
             >
               <X size={11} />
               Cancel
@@ -552,7 +552,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
           <>
             <button
               onClick={advance}
-              className="text-[12px] text-[#555] hover:text-[#888] transition-colors"
+              className="text-[12px] text-[#777] hover:text-[#aaa] transition-colors"
             >
               Skip
             </button>
@@ -667,18 +667,18 @@ export default function SettingsModal({ open, onClose }: Props) {
       {/* Panel */}
       <div
         ref={panelRef}
-        className="relative z-10 w-full max-w-4xl h-full max-h-[92vh] sm:max-h-[700px] flex rounded-2xl overflow-hidden bg-[#0c0c0c] border border-white/[0.08] shadow-2xl shadow-black/80 animate-fade-in"
+        className="relative z-10 w-full max-w-4xl h-full max-h-[92vh] sm:max-h-[700px] flex rounded-2xl overflow-hidden bg-[#1c1c1c] border border-white/[0.14] shadow-2xl shadow-black/80 animate-fade-in"
         style={{ fontFamily: "var(--font-body)" }}
       >
         {/* Left sidebar — hidden on mobile when wizard is open */}
         <div
           className={cn(
-            "flex-shrink-0 bg-[#0a0a0a] border-r border-white/[0.05] flex-col w-[200px] sm:w-[220px]",
+            "flex-shrink-0 bg-[#0a0a0a] border-r border-white/[0.10] flex-col w-[200px] sm:w-[220px]",
             showAddForm ? "hidden sm:flex" : "flex"
           )}
         >
           {/* Header */}
-          <div className="px-4 pt-5 pb-4 border-b border-white/[0.05] flex-shrink-0">
+          <div className="px-4 pt-5 pb-4 border-b border-white/[0.10] flex-shrink-0">
             <div className="flex items-center gap-2">
               <Gem size={14} className="text-[#FAC515]" strokeWidth={1.5} />
               <span
@@ -752,10 +752,10 @@ export default function SettingsModal({ open, onClose }: Props) {
           </nav>
 
           {/* Footer: close button */}
-          <div className="px-3 py-3 border-t border-white/[0.05] flex-shrink-0">
+          <div className="px-3 py-3 border-t border-white/[0.10] flex-shrink-0">
             <button
               onClick={onClose}
-              className="flex items-center gap-1.5 w-full text-[12px] text-[#555] hover:text-[#aaa] px-2.5 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
+              className="flex items-center gap-1.5 w-full text-[12px] text-[#777] hover:text-[#aaa] px-2.5 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
             >
               <X size={12} />
               Close
@@ -790,7 +790,7 @@ export default function SettingsModal({ open, onClose }: Props) {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-[13px] text-[#555]">
+              <p className="text-[13px] text-[#777]">
                 Select a client or add a new one
               </p>
             </div>

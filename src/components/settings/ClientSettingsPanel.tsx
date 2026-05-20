@@ -179,34 +179,34 @@ function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: 
   return (
     <div className="space-y-5">
       <div>
-        <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">Client name</label>
+        <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">Client name</label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Paradise Point"
-          className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors"
+          className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors"
         />
       </div>
 
       <div>
-        <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">Slug</label>
+        <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">Slug</label>
         <input
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
           placeholder="e.g. paradise-point"
-          className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] font-mono outline-none focus:border-[#FAC515]/40 transition-colors"
+          className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] font-mono outline-none focus:border-[#FAC515]/40 transition-colors"
         />
-        <p className="text-[11px] text-[#555] mt-1">Lowercase, hyphens only</p>
+        <p className="text-[11px] text-[#777] mt-1">Lowercase, hyphens only</p>
       </div>
 
       <div>
-        <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">AI system prompt</label>
+        <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">AI system prompt</label>
         <textarea
           value={systemPrompt}
           onChange={(e) => setSystemPrompt(e.target.value)}
           placeholder="You are the AI assistant for [Client Name]..."
           rows={4}
-          className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors resize-none leading-relaxed"
+          className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors resize-none leading-relaxed"
         />
       </div>
 
@@ -219,7 +219,7 @@ function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: 
         >
           {isActive
             ? <ToggleRight size={22} className="text-[#FAC515]" />
-            : <ToggleLeft size={22} className="text-[#555]" />}
+            : <ToggleLeft size={22} className="text-[#777]" />}
         </button>
         <span className="text-[13px] text-[#d8d8d8]">Active</span>
       </div>
@@ -315,7 +315,7 @@ function KnowledgeTab({ clientId }: { clientId: string }) {
     <div className="space-y-5">
       <div>
         <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Knowledge Documents</h3>
-        <p className="text-[12px] text-[#888] mt-1 leading-relaxed">
+        <p className="text-[12px] text-[#aaa] mt-1 leading-relaxed">
           Add Google Drive document links. The AI will use these as its knowledge base when answering questions about this client.
         </p>
       </div>
@@ -329,20 +329,20 @@ function KnowledgeTab({ clientId }: { clientId: string }) {
       ) : (
         <div className="space-y-2">
           {docs.length === 0 && (
-            <p className="text-[12px] text-[#666] py-4">
+            <p className="text-[12px] text-[#888] py-4">
               No documents yet. Add a Google Drive link below.
             </p>
           )}
           {docs.map((doc) => (
             <div
               key={doc.id}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#111] border border-white/[0.05]"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#1a1a1a] border border-white/[0.10]"
             >
-              <FileText size={14} className="text-[#888] flex-shrink-0" />
+              <FileText size={14} className="text-[#aaa] flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[12px] text-[#d8d8d8] truncate font-medium">{doc.name}</p>
                 {doc.last_modified_at && (
-                  <p className="text-[11px] text-[#666] mt-0.5">
+                  <p className="text-[11px] text-[#888] mt-0.5">
                     Modified {formatDate(doc.last_modified_at)}
                   </p>
                 )}
@@ -351,7 +351,7 @@ function KnowledgeTab({ clientId }: { clientId: string }) {
               <button
                 onClick={() => handleDelete(doc.id)}
                 aria-label={`Delete ${doc.name}`}
-                className="p-1.5 rounded-md text-[#555] hover:text-[#ef4444] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
+                className="p-1.5 rounded-md text-[#777] hover:text-[#ef4444] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
               >
                 <Trash2 size={13} />
               </button>
@@ -361,27 +361,27 @@ function KnowledgeTab({ clientId }: { clientId: string }) {
       )}
 
       {/* Add form */}
-      <div className="pt-2 border-t border-white/[0.05] space-y-3">
+      <div className="pt-2 border-t border-white/[0.10] space-y-3">
         <div>
-          <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">
+          <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">
             Google Drive URL
           </label>
           <input
             value={driveUrl}
             onChange={(e) => setDriveUrl(e.target.value)}
             placeholder="https://docs.google.com/..."
-            className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors"
+            className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors"
           />
         </div>
         <div>
-          <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">
+          <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">
             Document name (optional)
           </label>
           <input
             value={docName}
             onChange={(e) => setDocName(e.target.value)}
             placeholder="e.g. Brand Guidelines"
-            className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors"
+            className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors"
           />
         </div>
         {addError && <p className="text-[12px] text-red-400">{addError}</p>}
@@ -490,7 +490,7 @@ function PmsTab({ clientId }: { clientId: string }) {
     <div className="space-y-5">
       <div>
         <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Property Management System</h3>
-        <p className="text-[12px] text-[#888] mt-1 leading-relaxed">
+        <p className="text-[12px] text-[#aaa] mt-1 leading-relaxed">
           Connect your PMS to give the AI access to bookings, occupancy, and revenue data.
         </p>
       </div>
@@ -503,7 +503,7 @@ function PmsTab({ clientId }: { clientId: string }) {
         <p className="text-[12px] text-red-400">{error}</p>
       ) : connection && !showForm ? (
         <div className="space-y-4">
-          <div className="bg-[#111] border border-white/[0.05] rounded-xl p-4 space-y-3">
+          <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-[12px] font-semibold text-[#FAC515] px-2 py-0.5 rounded-md bg-[#FAC515]/10 border border-[#FAC515]/20">
@@ -514,12 +514,12 @@ function PmsTab({ clientId }: { clientId: string }) {
                     active
                   </span>
                 ) : (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#888]/10 text-[#888] border border-white/[0.05]">
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#888]/10 text-[#aaa] border border-white/[0.10]">
                     inactive
                   </span>
                 )}
               </div>
-              <span className="text-[11px] text-[#666]">
+              <span className="text-[11px] text-[#888]">
                 {connection.sync_status === "running" ? (
                   <span className="flex items-center gap-1 text-[#FAC515]">
                     <Loader2 size={10} className="animate-spin" />
@@ -532,7 +532,7 @@ function PmsTab({ clientId }: { clientId: string }) {
                 )}
               </span>
             </div>
-            <p className="text-[12px] text-[#888]">
+            <p className="text-[12px] text-[#aaa]">
               Last synced:{" "}
               <span className="text-[#d8d8d8]">
                 {connection.last_sync_at ? formatDate(connection.last_sync_at) : "Never"}
@@ -541,7 +541,7 @@ function PmsTab({ clientId }: { clientId: string }) {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="text-[12px] text-[#888] hover:text-[#ccc] underline underline-offset-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
+            className="text-[12px] text-[#aaa] hover:text-[#ccc] underline underline-offset-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
           >
             Update credentials
           </button>
@@ -551,7 +551,7 @@ function PmsTab({ clientId }: { clientId: string }) {
           {connection && (
             <button
               onClick={() => setShowForm(false)}
-              className="flex items-center gap-1.5 text-[12px] text-[#888] hover:text-[#ccc] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
+              className="flex items-center gap-1.5 text-[12px] text-[#aaa] hover:text-[#ccc] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
             >
               <X size={12} />
               Cancel
@@ -559,14 +559,14 @@ function PmsTab({ clientId }: { clientId: string }) {
           )}
 
           <div>
-            <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">Provider</label>
+            <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">Provider</label>
             <select
               value={provider}
               onChange={(e) => {
                 setProvider(e.target.value as PmsProvider);
                 setCredentials({});
               }}
-              className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] outline-none focus:border-[#FAC515]/40 transition-colors appearance-none"
+              className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] outline-none focus:border-[#FAC515]/40 transition-colors appearance-none"
             >
               {PMS_PROVIDERS.map((p) => (
                 <option key={p.value} value={p.value}>{p.label}</option>
@@ -576,7 +576,7 @@ function PmsTab({ clientId }: { clientId: string }) {
 
           {getCredentialFields(provider).map((field) => (
             <div key={field.key}>
-              <label className="text-[11px] text-[#888] uppercase tracking-wider block mb-1.5">
+              <label className="text-[11px] text-[#aaa] uppercase tracking-wider block mb-1.5">
                 {field.label}
               </label>
               <input
@@ -584,7 +584,7 @@ function PmsTab({ clientId }: { clientId: string }) {
                 value={credentials[field.key] ?? ""}
                 onChange={(e) => handleCredentialChange(field.key, e.target.value)}
                 placeholder={`Enter ${field.label}`}
-                className="w-full bg-[#0c0c0c] border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#444] outline-none focus:border-[#FAC515]/40 transition-colors"
+                className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#666] outline-none focus:border-[#FAC515]/40 transition-colors"
               />
             </div>
           ))}
@@ -625,7 +625,7 @@ function MetaTab({ clientId }: { clientId: string }) {
     <div className="space-y-5">
       <div>
         <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Meta Advertising Account</h3>
-        <p className="text-[12px] text-[#888] mt-1 leading-relaxed">
+        <p className="text-[12px] text-[#aaa] mt-1 leading-relaxed">
           Connect your Meta Ads account to give the AI access to campaign performance, spend, and audience data.
         </p>
       </div>
@@ -635,7 +635,7 @@ function MetaTab({ clientId }: { clientId: string }) {
           <Loader2 size={18} className="text-[#FAC515] animate-spin" />
         </div>
       ) : connection ? (
-        <div className="bg-[#111] border border-white/[0.05] rounded-xl p-4 space-y-3">
+        <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-[12px] font-semibold text-[#22c55e]">Connected</span>
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20">
@@ -643,17 +643,17 @@ function MetaTab({ clientId }: { clientId: string }) {
             </span>
           </div>
           <div className="space-y-1.5">
-            <p className="text-[12px] text-[#888]">
+            <p className="text-[12px] text-[#aaa]">
               Ad account:{" "}
               <span className="text-[#d8d8d8] font-mono">{connection.ad_account_id}</span>
             </p>
             {connection.token_expires_at && (
-              <p className="text-[12px] text-[#888]">
+              <p className="text-[12px] text-[#aaa]">
                 Token expires:{" "}
                 <span className="text-[#d8d8d8]">{formatDate(connection.token_expires_at)}</span>
               </p>
             )}
-            <p className="text-[12px] text-[#888]">
+            <p className="text-[12px] text-[#aaa]">
               Last synced:{" "}
               <span className="text-[#d8d8d8]">
                 {connection.last_sync_at ? formatDate(connection.last_sync_at) : "Never"}
@@ -665,10 +665,10 @@ function MetaTab({ clientId }: { clientId: string }) {
           </button>
         </div>
       ) : (
-        <div className="bg-[#111] border border-white/[0.05] rounded-xl p-5 space-y-4">
+        <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-5 space-y-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#555]" />
-            <span className="text-[13px] text-[#888]">Not connected</span>
+            <span className="text-[13px] text-[#aaa]">Not connected</span>
           </div>
           <a
             href={connectUrl}
@@ -676,7 +676,7 @@ function MetaTab({ clientId }: { clientId: string }) {
           >
             Connect Meta Account
           </a>
-          <p className="text-[11px] text-[#555]">
+          <p className="text-[11px] text-[#777]">
             Connecting will redirect you to Meta to authorise access.
           </p>
         </div>
@@ -702,24 +702,24 @@ function PerformanceTab() {
     <div className="space-y-5">
       <div>
         <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Performance Data</h3>
-        <p className="text-[12px] text-[#888] mt-1 leading-relaxed">
+        <p className="text-[12px] text-[#aaa] mt-1 leading-relaxed">
           Overall performance metrics are automatically calculated from your connected PMS and Meta Ads data.
         </p>
       </div>
 
-      <div className="bg-[#111] border border-white/[0.05] rounded-xl p-4 space-y-3">
+      <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4 space-y-3">
         {metrics.map(({ label, detail }) => (
           <div key={label} className="flex items-start gap-2.5">
             <Check size={14} className="text-[#22c55e] flex-shrink-0 mt-0.5" strokeWidth={2.5} />
             <div>
               <span className="text-[12px] text-[#d8d8d8] font-medium">{label}</span>
-              <span className="text-[12px] text-[#666]"> — {detail}</span>
+              <span className="text-[12px] text-[#888]"> — {detail}</span>
             </div>
           </div>
         ))}
       </div>
 
-      <p className="text-[12px] text-[#666] leading-relaxed">
+      <p className="text-[12px] text-[#888] leading-relaxed">
         Data refreshes automatically every 2–4 hours once your PMS and Meta Ads accounts are connected.
       </p>
     </div>
@@ -735,7 +735,7 @@ function AudiencesTab() {
     <div className="space-y-5">
       <div>
         <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Audience Assets & Campaign History</h3>
-        <p className="text-[12px] text-[#888] mt-1 leading-relaxed">
+        <p className="text-[12px] text-[#aaa] mt-1 leading-relaxed">
           Audience segments and promotional campaign history are synced from your connected Meta Ads account.
         </p>
       </div>
@@ -745,12 +745,12 @@ function AudiencesTab() {
           <h4 className="text-[12px] font-semibold text-[#aaa] uppercase tracking-wider mb-2">
             Custom Audiences
           </h4>
-          <div className="bg-[#111] border border-white/[0.05] rounded-xl p-4">
-            <p className="text-[12px] text-[#666] leading-relaxed">
+          <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4">
+            <p className="text-[12px] text-[#888] leading-relaxed">
               Audience data syncs automatically from your Meta Ads connection. Once connected, custom audiences,
               lookalike audiences, and saved audiences will appear here.
             </p>
-            <p className="text-[11px] text-[#555] mt-2">
+            <p className="text-[11px] text-[#777] mt-2">
               Connect Meta Ads to enable this.
             </p>
           </div>
@@ -760,12 +760,12 @@ function AudiencesTab() {
           <h4 className="text-[12px] font-semibold text-[#aaa] uppercase tracking-wider mb-2">
             Campaign History
           </h4>
-          <div className="bg-[#111] border border-white/[0.05] rounded-xl p-4">
-            <p className="text-[12px] text-[#666] leading-relaxed">
+          <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4">
+            <p className="text-[12px] text-[#888] leading-relaxed">
               Campaign history is imported from Meta Ads. The AI uses this data to analyse past campaign
               performance and inform recommendations.
             </p>
-            <p className="text-[11px] text-[#555] mt-2">
+            <p className="text-[11px] text-[#777] mt-2">
               Connect Meta Ads to enable this.
             </p>
           </div>
@@ -801,14 +801,14 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: P
           <p className="text-[16px] font-semibold text-[#f0f0ef] truncate leading-tight">
             {client.name}
           </p>
-          <p className="text-[11px] text-[#666] font-mono truncate">{client.slug}</p>
+          <p className="text-[11px] text-[#888] font-mono truncate">{client.slug}</p>
         </div>
         <span
           className={cn(
             "text-[11px] px-2 py-0.5 rounded-full border flex-shrink-0",
             client.is_active
               ? "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20"
-              : "bg-white/[0.03] text-[#666] border-white/[0.06]"
+              : "bg-white/[0.03] text-[#888] border-white/[0.06]"
           )}
         >
           {client.is_active ? "active" : "inactive"}
@@ -816,7 +816,7 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: P
       </div>
 
       {/* Tab bar */}
-      <div className="flex items-center gap-0 border-b border-white/[0.05] mb-5 flex-shrink-0 overflow-x-auto">
+      <div className="flex items-center gap-0 border-b border-white/[0.10] mb-5 flex-shrink-0 overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -825,7 +825,7 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: P
               "text-[12px] px-3 py-2.5 whitespace-nowrap border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-inset",
               activeTab === tab.id
                 ? "text-[#f0f0ef] border-[#FAC515]"
-                : "text-[#888] hover:text-[#ccc] border-transparent"
+                : "text-[#aaa] hover:text-[#ccc] border-transparent"
             )}
           >
             {tab.label}
