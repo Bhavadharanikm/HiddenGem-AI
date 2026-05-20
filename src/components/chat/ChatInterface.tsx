@@ -126,6 +126,7 @@ export default function ChatInterface({
           body: JSON.stringify({
             message: content,
             conversation_id: selectedConversationId,
+            tenant_id: selectedClient.id,
             stream: true,
           }),
         });
