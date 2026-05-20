@@ -51,14 +51,28 @@ async function* streamWithOpenAI(
   messages: MessageParam[],
   systemPrompt: string
 ): AsyncGenerator<{ type: "delta"; text: string }> {
-  const stream = await getOpenAI().chat.completions.create({
-    model: "gpt-4o",
-    messages: [{ role: "system", content: systemPrompt }, ...toOpenAIMessages(messages)],
-    stream: true,
-  });
-  for await (const chunk of stream) {
-    const text = chunk.choices[0]?.delta?.content ?? "";
-    if (text) yield { type: "delta" as const, text };
+  try {
+    const stream = await getOpenAI().chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "system", content: systemPrompt }, ...toOpenAIMessages(messages)],
+      stream: true,
+    });
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content ?? "";
+      if (text) yield { type: "delta" as const, text };
+    }
+  } catch (err) {
+    const status = err !== null && typeof err === "object" && "status" in err
+      ? (err as { status: number }).status : 0;
+    if (status === 429) {
+      throw new Error(
+        "Both AI providers are out of credits. Add API credits at platform.openai.com/settings/billing or console.anthropic.com/settings/billing — these are separate from ChatGPT/Claude app subscriptions."
+      );
+    }
+    if (status === 401) {
+      throw new Error("OpenAI API key is invalid. Check OPENAI_API_KEY in your Netlify environment variables.");
+    }
+    throw err;
   }
 }
 const MAX_TOOL_ITERATIONS = 10;
