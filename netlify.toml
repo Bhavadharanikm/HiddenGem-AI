@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Environment variables that must be set in the Netlify dashboard:
+# ANTHROPIC_API_KEY
+# NEXT_PUBLIC_SUPABASE_URL
+# NEXT_PUBLIC_SUPABASE_ANON_KEY
+# SUPABASE_SERVICE_ROLE_KEY
+# OPENAI_API_KEY
+# UPSTASH_REDIS_REST_URL
+# UPSTASH_REDIS_REST_TOKEN
