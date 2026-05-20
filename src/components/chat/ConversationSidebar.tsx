@@ -44,7 +44,7 @@ export default function ConversationSidebar({
           <Gem size={18} className="text-[#FAC515] flex-shrink-0" strokeWidth={1.5} />
           <div className="flex items-baseline">
             <span
-              className="text-[14px] font-semibold text-[#f0f0ef] italic leading-none"
+              className="text-[14px] font-semibold text-white italic leading-none"
               style={{ fontFamily: "var(--font-display)" }}
             >
               HiddenGem
