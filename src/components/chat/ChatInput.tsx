@@ -67,7 +67,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
           aria-label={placeholder ?? "Chat message"}
           rows={1}
           className={cn(
-            "flex-1 bg-transparent text-[14px] text-[#f0f0ef] placeholder:text-[#888]",
+            "flex-1 bg-transparent text-[14px] text-[#f0f0ef] placeholder:text-[#cccccc]",
             "outline-none resize-none leading-[1.65]",
             "min-h-[24px] max-h-[180px]",
             disabled && "cursor-not-allowed"
@@ -80,17 +80,17 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
           className={
             canSend
               ? "w-8 h-8 rounded-xl bg-[#FAC515] hover:bg-[#e8b310] text-black flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#FAC515]/15 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
-              : "w-8 h-8 rounded-xl bg-white/[0.04] text-[#888] flex items-center justify-center flex-shrink-0 cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
+              : "w-8 h-8 rounded-xl bg-white/[0.04] text-[#cccccc] flex items-center justify-center flex-shrink-0 cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
           }
         >
           <ArrowUp size={15} strokeWidth={2.5} />
         </button>
       </div>
-      <p className="text-[12px] text-[#888] text-center mt-2 select-none">
-        <kbd className="px-1.5 py-0.5 rounded bg-white/[0.04] text-[#aaa] text-[11px]">
+      <p className="text-[12px] text-[#cccccc] text-center mt-2 select-none">
+        <kbd className="px-1.5 py-0.5 rounded bg-white/[0.04] text-[#cccccc] text-[11px]">
           ⌘
         </kbd>{" "}
-        <kbd className="px-1.5 py-0.5 rounded bg-white/[0.04] text-[#aaa] text-[11px]">
+        <kbd className="px-1.5 py-0.5 rounded bg-white/[0.04] text-[#cccccc] text-[11px]">
           ↵
         </kbd>{" "}
         to send

@@ -254,7 +254,7 @@ export default function ChatInterface({
           {/* Toggle left nav */}
           <button
             onClick={() => setLeftNavOpen((v) => !v)}
-            className="p-2.5 rounded-md hover:bg-white/[0.04] text-[#888] hover:text-[#ccc] transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#080808]"
+            className="p-2.5 rounded-md hover:bg-white/[0.04] text-[#cccccc] hover:text-[#ccc] transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#080808]"
             aria-label="Toggle navigation"
           >
             <PanelLeft size={15} />
@@ -264,10 +264,10 @@ export default function ChatInterface({
           <nav aria-label="Breadcrumb" className="flex items-center gap-1 flex-1 min-w-0 text-[12px]">
             {selectedClient && (
               <>
-                <span className="text-[#aaa] truncate">
+                <span className="text-[#cccccc] truncate">
                   {selectedClient.name}
                 </span>
-                <span className="text-[#999] select-none flex-shrink-0">/</span>
+                <span className="text-[#cccccc] select-none flex-shrink-0">/</span>
               </>
             )}
             <span className="text-[#ccc] truncate">{currentTitle}</span>
@@ -276,7 +276,7 @@ export default function ChatInterface({
           {/* Toggle right history panel */}
           <button
             onClick={() => setHistoryOpen((v) => !v)}
-            className="p-2.5 rounded-md hover:bg-white/[0.04] text-[#888] hover:text-[#ccc] transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#080808]"
+            className="p-2.5 rounded-md hover:bg-white/[0.04] text-[#cccccc] hover:text-[#ccc] transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#080808]"
             aria-label="Toggle conversation history"
           >
             <PanelRight size={15} />
@@ -382,7 +382,7 @@ function EmptyState({ clientName, onSuggestion }: { clientName?: string; onSugge
       </h2>
 
       {/* Subtitle */}
-      <p className="text-[13px] text-[#999] max-w-[260px] leading-relaxed mb-8">
+      <p className="text-[13px] text-[#cccccc] max-w-[260px] leading-relaxed mb-8">
         Ask about bookings, campaign performance, audience data, or anything in
         the knowledge base.
       </p>
@@ -395,7 +395,7 @@ function EmptyState({ clientName, onSuggestion }: { clientName?: string; onSugge
               type="button"
               key={hint}
               onClick={() => onSuggestion?.(hint)}
-              className="text-[11.5px] text-[#bbb] border border-[#FAC515]/20 bg-[#FAC515]/[0.04] rounded-full px-3.5 py-1.5 hover:border-[#FAC515]/50 hover:text-[#f0f0ef] transition-colors cursor-pointer"
+              className="text-[11.5px] text-[#d0d0d0] border border-[#FAC515]/20 bg-[#FAC515]/[0.04] rounded-full px-3.5 py-1.5 hover:border-[#FAC515]/50 hover:text-[#f0f0ef] transition-colors cursor-pointer"
             >
               {hint}
             </button>

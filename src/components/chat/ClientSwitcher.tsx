@@ -91,9 +91,9 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         ) : (
           <>
             <div className="w-7 h-7 rounded-md bg-[#0c0c0c] border border-white/[0.07] flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px] text-[#bbb]">—</span>
+              <span className="text-[10px] text-[#d0d0d0]">—</span>
             </div>
-            <span className="text-[13px] text-[#bbb] flex-1">
+            <span className="text-[13px] text-[#d0d0d0] flex-1">
               Select client
             </span>
           </>
@@ -101,7 +101,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         <ChevronDown
           size={12}
           className={cn(
-            "text-[#bbb] transition-transform duration-150 flex-shrink-0",
+            "text-[#d0d0d0] transition-transform duration-150 flex-shrink-0",
             open && "rotate-180"
           )}
         />
@@ -111,21 +111,21 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         <div role="listbox" aria-label="Clients" className="absolute top-full left-0 right-0 mt-1 bg-[#111111] border border-white/[0.08] rounded-xl shadow-2xl shadow-black/90 z-50 overflow-hidden animate-slide-up">
           {/* Search input */}
           <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06]">
-            <Search size={12} className="text-[#888] flex-shrink-0" aria-hidden={true} />
+            <Search size={12} className="text-[#cccccc] flex-shrink-0" aria-hidden={true} />
             <input
               ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search clients…"
               aria-label="Search clients"
-              className="flex-1 bg-transparent text-[12.5px] text-[#f0f0ef] placeholder:text-[#888] outline-none"
+              className="flex-1 bg-transparent text-[12.5px] text-[#f0f0ef] placeholder:text-[#cccccc] outline-none"
             />
           </div>
 
           {/* List */}
           <div className="py-1 max-h-52 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="text-[12px] text-[#bbb] px-3 py-3 text-center">
+              <p className="text-[12px] text-[#d0d0d0] px-3 py-3 text-center">
                 No clients found
               </p>
             ) : (
@@ -161,7 +161,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
                     <span
                       className={cn(
                         "text-[12.5px] flex-1 truncate",
-                        isActive ? "text-[#f0f0ef]" : "text-[#888888]"
+                        isActive ? "text-[#f0f0ef]" : "text-[#cccccc]"
                       )}
                     >
                       {client.name}

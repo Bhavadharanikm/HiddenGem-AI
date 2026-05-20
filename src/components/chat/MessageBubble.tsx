@@ -48,7 +48,7 @@ export default function MessageBubble({ message, isStreaming }: Props) {
               {message.content}
             </p>
           </div>
-          <p className="text-[12px] text-[#999] mt-1.5 text-right pr-1">
+          <p className="text-[12px] text-[#cccccc] mt-1.5 text-right pr-1">
             {formatTime(message.created_at)}
           </p>
         </div>
@@ -91,7 +91,7 @@ export default function MessageBubble({ message, isStreaming }: Props) {
               )}
             </div>
           </div>
-          <p className="text-[12px] text-[#999] mt-1.5 pl-1">
+          <p className="text-[12px] text-[#cccccc] mt-1.5 pl-1">
             {isStreaming ? "Responding…" : formatTime(message.created_at)}
           </p>
         </div>

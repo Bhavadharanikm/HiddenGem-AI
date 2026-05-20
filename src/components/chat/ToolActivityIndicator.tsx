@@ -10,7 +10,7 @@ export default function ToolActivityIndicator({ activity }: Props) {
           <span aria-hidden="true" className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FAC515] opacity-35" />
           <span aria-hidden="true" className="relative inline-flex rounded-full h-2 w-2 bg-[#FAC515]/55" />
         </span>
-        <span className="text-[12px] text-[#aaa]">{activity}</span>
+        <span className="text-[12px] text-[#cccccc]">{activity}</span>
       </div>
     </div>
   );

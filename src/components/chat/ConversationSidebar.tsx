@@ -87,7 +87,7 @@ export default function ConversationSidebar({
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0c0c0c]",
                 active
                   ? "border-[#FAC515] bg-[#FAC515]/[0.07] text-[#f0f0ef]"
-                  : "border-transparent hover:bg-white/[0.03] text-[#aaa] hover:text-[#e0e0e0]"
+                  : "border-transparent hover:bg-white/[0.03] text-[#cccccc] hover:text-[#e0e0e0]"
               )}
             >
               <Icon
@@ -111,7 +111,7 @@ export default function ConversationSidebar({
       <div className="px-2 mb-3">
         <button
           onClick={onSettingsOpen}
-          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-left transition-colors border-l-[2px] border-transparent hover:bg-white/[0.03] text-[#aaa] hover:text-[#e0e0e0] text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0c0c0c]"
+          className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-left transition-colors border-l-[2px] border-transparent hover:bg-white/[0.03] text-[#cccccc] hover:text-[#e0e0e0] text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0c0c0c]"
         >
           <Settings size={14} className="flex-shrink-0 text-current" strokeWidth={1.75} />
           Settings
@@ -120,7 +120,7 @@ export default function ConversationSidebar({
 
       {/* Footer */}
       <div className="px-4 py-3 border-t border-white/[0.05]">
-        <p className="text-[11px] text-[#aaa]">
+        <p className="text-[11px] text-[#cccccc]">
           Powered by HiddenGem Media
         </p>
       </div>

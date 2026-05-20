@@ -93,7 +93,7 @@ export default function ConversationHistory({
       <div className="flex-1 overflow-y-auto px-2 py-2">
         {conversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-            <p className="text-[11.5px] text-[#aaa]">
+            <p className="text-[11.5px] text-[#cccccc]">
               No conversations yet
             </p>
           </div>
@@ -127,7 +127,7 @@ export default function ConversationHistory({
                       >
                         {convo.title}
                       </p>
-                      <p className="text-[12px] text-[#aaa] mt-0.5">
+                      <p className="text-[12px] text-[#cccccc] mt-0.5">
                         {formatTime(convo.updated_at)}
                       </p>
                     </button>
