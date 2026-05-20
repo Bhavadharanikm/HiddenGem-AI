@@ -9,6 +9,11 @@ function getAnthropic() {
   if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   return _anthropic;
 }
+
+// True when Supabase is not configured — agent runs without DB persistence
+function isSupabaseConfigured() {
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
 const MAX_TOOL_ITERATIONS = 10;
 const MODEL = "claude-sonnet-4-6";
 
@@ -181,40 +186,54 @@ export async function* runAgentStream(
 ): AsyncGenerator<
   { type: "tool_start"; name: string } | { type: "delta"; text: string } | { type: "done"; conversationId: string; inputTokens: number; outputTokens: number }
 > {
-  const db = getServiceClient();
+  const dbEnabled = isSupabaseConfigured();
+  const db = dbEnabled ? getServiceClient() : null;
   const { tenantId, userMessage, source = "api" } = opts;
 
   let conversationId = opts.conversationId;
-  if (!conversationId) {
-    const title = userMessage.slice(0, 80);
-    const { data: conv } = await db
-      .from("conversations")
-      .insert({ tenant_id: tenantId, title, source })
-      .select("id")
-      .single();
-    conversationId = conv!.id;
+
+  if (dbEnabled && db) {
+    if (!conversationId) {
+      const title = userMessage.slice(0, 80);
+      const { data: conv } = await db
+        .from("conversations")
+        .insert({ tenant_id: tenantId, title, source })
+        .select("id")
+        .single();
+      conversationId = conv?.id ?? crypto.randomUUID();
+    }
+
+    await db.from("messages").insert({
+      tenant_id: tenantId,
+      conversation_id: conversationId,
+      role: "user",
+      content: userMessage,
+    });
+  } else {
+    conversationId = conversationId ?? crypto.randomUUID();
   }
 
-  const { data: history } = await db
-    .from("messages")
-    .select("role, content")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
-
-  const messages: MessageParam[] = (history ?? []).map((m) => ({
-    role: m.role as "user" | "assistant",
-    content: m.content as MessageParam["content"],
-  }));
+  // Load history only when DB is available
+  const messages: MessageParam[] = [];
+  if (dbEnabled && db && opts.conversationId) {
+    const { data: history } = await db
+      .from("messages")
+      .select("role, content")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
+    messages.push(
+      ...(history ?? []).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content as MessageParam["content"],
+      }))
+    );
+  }
   messages.push({ role: "user", content: userMessage });
 
-  await db.from("messages").insert({
-    tenant_id: tenantId,
-    conversation_id: conversationId,
-    role: "user",
-    content: userMessage,
-  });
+  const systemPrompt = dbEnabled
+    ? await assembleSystemPrompt(tenantId)
+    : "You are a helpful AI assistant for a hospitality marketing agency.";
 
-  const systemPrompt = await assembleSystemPrompt(tenantId);
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
   let fullContent = "";
@@ -227,7 +246,7 @@ export async function* runAgentStream(
       model: MODEL,
       max_tokens: 4096,
       system: [{ type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } }],
-      tools: ALL_TOOLS,
+      tools: dbEnabled ? ALL_TOOLS : [],
       messages,
     });
 
@@ -251,7 +270,7 @@ export async function* runAgentStream(
 
     if (finalMessage.stop_reason === "end_turn") break;
 
-    if (finalMessage.stop_reason === "tool_use") {
+    if (finalMessage.stop_reason === "tool_use" && dbEnabled) {
       const toolResults: MessageParam = {
         role: "user",
         content: await Promise.all(
@@ -274,17 +293,19 @@ export async function* runAgentStream(
     break;
   }
 
-  await db.from("messages").insert({
-    tenant_id: tenantId,
-    conversation_id: conversationId,
-    role: "assistant",
-    content: fullContent,
-    input_tokens: totalInputTokens,
-    output_tokens: totalOutputTokens,
-    model: MODEL,
-  });
+  if (dbEnabled && db) {
+    await db.from("messages").insert({
+      tenant_id: tenantId,
+      conversation_id: conversationId,
+      role: "assistant",
+      content: fullContent,
+      input_tokens: totalInputTokens,
+      output_tokens: totalOutputTokens,
+      model: MODEL,
+    });
 
-  await db.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
+    await db.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
+  }
 
   yield { type: "done", conversationId, inputTokens: totalInputTokens, outputTokens: totalOutputTokens };
 }

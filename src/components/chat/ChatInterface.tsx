@@ -132,7 +132,12 @@ export default function ChatInterface({
         });
 
         if (!res.ok || !res.body) {
-          throw new Error(`Chat failed: ${res.status}`);
+          let msg = `Request failed (${res.status})`;
+          try {
+            const body = await res.json();
+            if (body?.error?.message) msg = body.error.message;
+          } catch { /* ignore */ }
+          throw new Error(msg);
         }
 
         const reader = res.body.getReader();
@@ -161,9 +166,13 @@ export default function ChatInterface({
                 setStreamingMessage(fullContent);
               } else if (evt.type === "done") {
                 newConversationId = evt.conversation_id;
+              } else if (evt.type === "error") {
+                throw new Error(evt.message ?? "Unknown error from server");
               }
-            } catch {
-              // Partial JSON — skip
+            } catch (parseErr) {
+              // Re-throw real errors; swallow JSON parse failures on partial lines
+              if (parseErr instanceof SyntaxError) continue;
+              throw parseErr;
             }
           }
         }
