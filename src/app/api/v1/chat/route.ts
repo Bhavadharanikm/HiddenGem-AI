@@ -7,6 +7,19 @@ import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 // Edge runtime: no timeout limit, full streaming support on Netlify
 export const runtime = "edge";
 
+function friendlyError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  try {
+    const parsed = JSON.parse(raw);
+    const type: string = parsed?.error?.type ?? "";
+    const msg: string = parsed?.error?.message ?? "";
+    if (type === "overloaded_error") return "Anthropic's AI is currently overloaded. Please wait a moment and try again.";
+    if (type === "rate_limit_error") return "You've hit the rate limit. Please wait a moment and try again.";
+    if (msg) return msg;
+  } catch { /* not JSON */ }
+  return raw || "Something went wrong. Please try again.";
+}
+
 export async function POST(req: NextRequest) {
   type ApiAttachment = { name: string; mediaType: string; data: string };
   let body: { message: string; conversation_id?: string; stream?: boolean; tenant_id?: string; attachments?: ApiAttachment[] };
@@ -89,10 +102,7 @@ export async function POST(req: NextRequest) {
           }
           void conversationId;
         } catch (err) {
-          send({
-            type: "error",
-            message: err instanceof Error ? err.message : "Agent error",
-          });
+          send({ type: "error", message: friendlyError(err) });
         } finally {
           controller.close();
         }
