@@ -8,7 +8,7 @@ export default function Icon() {
     (
       <div
         style={{
-          background: "#0a0a0a",
+          background: "linear-gradient(135deg, #2997ff 0%, #1a6fd4 100%)",
           width: "100%",
           height: "100%",
           display: "flex",
@@ -17,7 +17,6 @@ export default function Icon() {
           borderRadius: "7px",
         }}
       >
-        {/* Gem / diamond shape built from SVG paths matching lucide's Gem icon */}
         <svg
           width="20"
           height="20"
@@ -26,11 +25,11 @@ export default function Icon() {
           xmlns="http://www.w3.org/2000/svg"
         >
           {/* Outer gem silhouette */}
-          <path d="M6 3h12l4 6-10 13L2 9Z" fill="#FAC515" />
-          {/* Inner facet lines — slightly darker gold for depth */}
-          <path d="M11 3 8 9l4 13 4-13-3-6" fill="#c49a10" />
+          <path d="M6 3h12l4 6-10 13L2 9Z" fill="white" fillOpacity="0.95" />
+          {/* Inner facet */}
+          <path d="M11 3 8 9l4 13 4-13-3-6" fill="white" fillOpacity="0.4" />
           {/* Girdle line */}
-          <line x1="2" y1="9" x2="22" y2="9" stroke="#0a0a0a" strokeWidth="1.2" />
+          <line x1="2" y1="9" x2="22" y2="9" stroke="white" strokeOpacity="0.5" strokeWidth="1.2" />
         </svg>
       </div>
     ),

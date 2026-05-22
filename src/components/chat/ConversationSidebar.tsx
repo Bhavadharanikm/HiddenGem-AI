@@ -70,10 +70,7 @@ export default function ConversationSidebar({
             <span
               className="text-[14px] font-semibold leading-none tracking-[-0.02em] text-slate-900"
             >
-              HiddenGem
-            </span>
-            <span className="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-400">
-              AI Workspace
+              HiddenGem AI
             </span>
           </div>
         </div>

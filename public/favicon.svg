@@ -1,12 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#0a0a0a"/>
-  <!-- Gem shape (lucide Gem icon scaled to 20x20, centered at 6,6) -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2997ff"/>
+      <stop offset="100%" stop-color="#1a6fd4"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
   <g transform="translate(6,6) scale(0.833)">
-    <!-- Outer gem -->
-    <path d="M6 3h12l4 6-10 13L2 9Z" fill="#FAC515"/>
-    <!-- Inner facet -->
-    <path d="M11 3 8 9l4 13 4-13-3-6" fill="#c49a10"/>
-    <!-- Girdle separator -->
-    <line x1="2" y1="9" x2="22" y2="9" stroke="#0a0a0a" stroke-width="1.2"/>
+    <path d="M6 3h12l4 6-10 13L2 9Z" fill="white" fill-opacity="0.95"/>
+    <path d="M11 3 8 9l4 13 4-13-3-6" fill="white" fill-opacity="0.4"/>
+    <line x1="2" y1="9" x2="22" y2="9" stroke="white" stroke-opacity="0.45" stroke-width="1.2"/>
   </g>
 </svg>
