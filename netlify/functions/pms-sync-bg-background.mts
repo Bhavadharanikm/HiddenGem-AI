@@ -96,7 +96,7 @@ export default async function handler(req: Request) {
             guests: b.guests,
             total_revenue: b.totalRevenue,
             platform: b.platform,
-            raw_data: b.rawData,
+            raw_data: b.rawData as unknown as import("../../src/types/database").Json,
           }));
         for (let i = 0; i < bookingRows.length; i += 100) {
           await db

@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
             const bookingRows = bookings.filter((b) => propIdMap[b.propertyExternalId]).map((b) => ({
               tenant_id: tenantId, property_id: propIdMap[b.propertyExternalId], external_id: b.externalId,
               status: b.status, check_in: b.checkIn || null, check_out: b.checkOut || null,
-              guests: b.guests, total_revenue: b.totalRevenue, platform: b.platform, raw_data: b.rawData,
+              guests: b.guests, total_revenue: b.totalRevenue, platform: b.platform, raw_data: b.rawData as unknown as import("@/types/database").Json,
             }));
             for (let i = 0; i < bookingRows.length; i += 100) {
               await db.from("pms_bookings").upsert(bookingRows.slice(i, i + 100), { onConflict: "property_id,external_id" });
