@@ -63,3 +63,22 @@ export async function POST(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ connection: data });
 }
+
+// PATCH — reset a stuck sync back to idle
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!isDashboard(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const db = getServiceClient();
+
+  const { error } = await db
+    .from("pms_connections")
+    .update({ sync_status: "idle" })
+    .eq("tenant_id", id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ reset: true });
+}

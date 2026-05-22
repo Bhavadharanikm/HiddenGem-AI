@@ -1,11 +1,4 @@
-import OpenAI from "openai";
 import { getServiceClient } from "@/lib/supabase/service";
-
-let _openai: OpenAI | null = null;
-function getOpenAI() {
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return _openai;
-}
 
 export const searchKnowledgeTool = {
   name: "search_knowledge_base",
@@ -32,31 +25,32 @@ export async function executeSearchKnowledge(
   input: { query: string; num_results?: number }
 ) {
   const db = getServiceClient();
+  const limit = input.num_results ?? 6;
 
-  // Embed the query
-  const embeddingRes = await getOpenAI().embeddings.create({
-    model: "text-embedding-3-small",
-    input: input.query,
-  });
-  const embedding = embeddingRes.data[0].embedding;
+  const terms = input.query.trim().split(/\s+/).filter(Boolean);
 
-  const { data, error } = await db.rpc("match_knowledge_chunks", {
-    p_tenant_id: tenantId,
-    p_embedding: embedding,
-    p_match_count: input.num_results ?? 6,
-    p_threshold: 0.68,
-  });
+  const { data, error } = await db
+    .from("knowledge_chunks")
+    .select("content, document_id")
+    .eq("tenant_id", tenantId)
+    .or(terms.map((t) => `content.ilike.%${t}%`).join(","))
+    .limit(limit);
 
   if (error) throw new Error(`Knowledge search failed: ${error.message}`);
-  if (!data || data.length === 0) {
-    return { results: [], message: "No relevant documents found." };
-  }
+  if (!data?.length) return { results: [], message: "No relevant documents found." };
+
+  const docIds = [...new Set(data.map((r) => r.document_id))];
+  const { data: docs } = await db
+    .from("knowledge_documents")
+    .select("id, name")
+    .in("id", docIds);
+
+  const docMap = Object.fromEntries((docs ?? []).map((d) => [d.id, d.name]));
 
   return {
     results: data.map((r) => ({
       content: r.content,
-      document: r.document_name,
-      similarity: Math.round(r.similarity * 100) / 100,
+      document: docMap[r.document_id] ?? "Unknown",
     })),
   };
 }

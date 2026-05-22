@@ -10,6 +10,7 @@ import {
   Settings,
   Mail,
   Check,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ClientSwitcher from "./ClientSwitcher";
@@ -20,14 +21,16 @@ type Props = {
   selectedClient: Client | null;
   onClientChange: (client: Client) => void;
   onSettingsOpen: () => void;
-  activeView: "chat" | "performance" | "email";
-  onNavigate: (view: "chat" | "performance" | "email") => void;
+  activeView: "chat" | "knowledge" | "performance" | "email";
+  onNavigate: (view: "chat" | "knowledge" | "performance" | "email") => void;
   onFilterApply?: (month: number, year: number) => void;
 };
 
+type KDoc = { id: string; name: string; google_doc_url: string; status: string };
+
 const NAV_ITEMS = [
   { icon: MessageSquare, label: "Chat", view: "chat" as const },
-  { icon: BookOpen, label: "Knowledge Base", active: false },
+  { icon: BookOpen, label: "Knowledge Base", view: "knowledge" as const },
   { icon: BarChart2, label: "Performance", view: "performance" as const },
   { icon: Mail, label: "Email", view: "email" as const },
   { icon: Target, label: "Campaigns", active: false },
@@ -45,11 +48,26 @@ export default function ConversationSidebar({
   const [month, setMonth] = useState(new Date().getMonth());
   const [year, setYear] = useState(new Date().getFullYear());
   const [filterApplied, setFilterApplied] = useState(false);
+  const [masterBrandDoc, setMasterBrandDoc] = useState<KDoc | null>(null);
 
   useEffect(() => {
     setMonth(new Date().getMonth());
     setYear(new Date().getFullYear());
     setFilterApplied(false);
+  }, [selectedClient?.id]);
+
+  useEffect(() => {
+    setMasterBrandDoc(null);
+    if (!selectedClient) return;
+    fetch(`/api/v1/clients/${selectedClient.id}/knowledge`, { headers: { "X-Dashboard-Session": "1" } })
+      .then((r) => r.json())
+      .then((j) => {
+        const doc = (j.docs as KDoc[] ?? []).find(
+          (d) => d.name === "Master Brand Document" && d.status === "ready"
+        );
+        setMasterBrandDoc(doc ?? null);
+      })
+      .catch(() => {});
   }, [selectedClient?.id]);
 
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -175,6 +193,32 @@ export default function ConversationSidebar({
           })}
         </div>
       </nav>
+
+      {/* Master Brand Document */}
+      {masterBrandDoc && (
+        <>
+          <div className="mx-4 my-3 border-t border-[var(--border)]" />
+          <div className="px-2">
+            <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Documents
+            </p>
+            <a
+              href={masterBrandDoc.google_doc_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(15,23,42,0.06)]">
+                <BookOpen size={15} strokeWidth={1.75} className="text-current" />
+              </div>
+              <span className="flex-1 truncate text-[11.5px] font-bold uppercase tracking-[0.08em]">
+                Brand Doc
+              </span>
+              <ExternalLink size={11} className="flex-shrink-0 opacity-50" />
+            </a>
+          </div>
+        </>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

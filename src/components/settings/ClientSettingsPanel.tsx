@@ -21,6 +21,7 @@ const SWATCH_COLORS = [
 function getInitials(n: string) { return n.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(); }
 function toSlug(n: string) { return n.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim(); }
 function formatDate(d: string | null) { return d ? new Date(d).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : null; }
+function formatDateTime(d: string | null) { return d ? new Date(d).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null; }
 
 type Tab = "general" | "knowledge" | "pms" | "meta" | "performance" | "audiences";
 const TABS: { id: Tab; label: string }[] = [
@@ -33,7 +34,7 @@ const field = "w-full rounded-xl border border-[var(--border)] bg-white px-3 py-
 const lbl   = "text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 block mb-1.5";
 const btn   = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)]";
 
-type KDoc = { id: string; name: string; google_doc_url: string; mime_type: string | null; status: "pending"|"processing"|"ready"|"error"; last_modified_at: string | null; created_at: string };
+type KDoc = { id: string; name: string; google_doc_url: string; mime_type: string | null; status: "pending"|"processing"|"ready"|"error"; error_msg?: string | null; last_modified_at: string | null; created_at: string };
 type PmsCon = { id: string; provider: string; last_sync_at: string | null; sync_status: string; is_active: boolean };
 
 function StatusBadge({ status }: { status: string }) {
@@ -90,6 +91,14 @@ function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: 
   );
 }
 
+const DOC_NAME_OPTIONS = [
+  "Master Brand Document",
+  "Client Overall Internal Performance Data",
+  "Client's Audience Assets",
+  "Promotional Campaign History",
+  "Email Performance",
+] as const;
+
 function KnowledgeTab({ clientId }: { clientId: string }) {
   const [docs, setDocs]         = useState<KDoc[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -107,6 +116,13 @@ function KnowledgeTab({ clientId }: { clientId: string }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Auto-retry any stuck pending/error docs on mount
+  useEffect(() => {
+    const stuck = docs.some((d) => d.status === "pending" || d.status === "error");
+    if (!stuck) return;
+    fetch(`/api/v1/clients/${clientId}/knowledge`, { method: "PATCH", headers: { "X-Dashboard-Session": "1" } }).catch(() => {});
+  }, [docs, clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Poll while any doc is still processing or pending
   useEffect(() => {
     const inFlight = docs.some((d) => d.status === "pending" || d.status === "processing");
@@ -120,9 +136,10 @@ function KnowledgeTab({ clientId }: { clientId: string }) {
   }, [docs, clientId]);
 
   async function add() {
+    if (!dname) { setAddErr("Please select a document name"); return; }
     if (!url.trim()) { setAddErr("Please enter a Google Drive URL"); return; }
     setAdding(true); setAddErr(null);
-    try { const r = await fetch(`/api/v1/clients/${clientId}/knowledge`, { method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ drive_url: url.trim(), name: dname.trim() || undefined }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setUrl(""); setDname(""); await load(); }
+    try { const r = await fetch(`/api/v1/clients/${clientId}/knowledge`, { method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ drive_url: url.trim(), name: dname }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setUrl(""); setDname(""); await load(); }
     catch (e) { setAddErr(e instanceof Error ? e.message : "Failed to add"); } finally { setAdding(false); }
   }
 
@@ -138,17 +155,28 @@ function KnowledgeTab({ clientId }: { clientId: string }) {
        : <div className="space-y-2">
            {docs.length === 0 && <p className="text-[12px] text-slate-400 py-3">No documents yet.</p>}
            {docs.map((doc) => (
-             <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[rgba(41,151,255,0.04)] border border-[var(--border)]">
-               <FileText size={14} className="text-[var(--brand)] flex-shrink-0" />
-               <div className="flex-1 min-w-0"><p className="text-[12px] text-slate-800 truncate font-medium">{doc.name}</p>{doc.last_modified_at && <p className="text-[11px] text-slate-400 mt-0.5">Modified {formatDate(doc.last_modified_at)}</p>}</div>
-               <StatusBadge status={doc.status} />
-               <button onClick={() => del(doc.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+             <div key={doc.id} className="rounded-xl bg-[rgba(41,151,255,0.04)] border border-[var(--border)]">
+               <div className="flex items-center gap-3 px-3 py-2.5">
+                 <FileText size={14} className="text-[var(--brand)] flex-shrink-0" />
+                 <div className="flex-1 min-w-0"><p className="text-[12px] text-slate-800 truncate font-medium">{doc.name}</p>{doc.last_modified_at && <p className="text-[11px] text-slate-400 mt-0.5">Modified {formatDate(doc.last_modified_at)}</p>}</div>
+                 <StatusBadge status={doc.status} />
+                 <button onClick={() => del(doc.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+               </div>
+               {doc.status === "error" && doc.error_msg && (
+                 <p className="px-3 pb-2.5 text-[11px] text-red-500 leading-relaxed">{doc.error_msg}</p>
+               )}
              </div>
            ))}
          </div>}
       <div className="pt-3 border-t border-[var(--border)] space-y-3">
+        <div>
+          <label className={lbl}>Document name</label>
+          <select value={dname} onChange={(e) => setDname(e.target.value)} className={cn(field, "appearance-none cursor-pointer")}>
+            <option value="">Select a document type…</option>
+            {DOC_NAME_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
         <div><label className={lbl}>Google Drive URL</label><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://docs.google.com/..." className={field} /></div>
-        <div><label className={lbl}>Document name <span className="normal-case font-normal text-slate-400">(optional)</span></label><input value={dname} onChange={(e) => setDname(e.target.value)} placeholder="e.g. Brand Guidelines" className={field} /></div>
         {addErr && <p className="text-[12px] text-red-500">{addErr}</p>}
         <button onClick={add} disabled={adding} className={btn}>{adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} strokeWidth={2.5} />}{adding ? "Adding…" : "Add document"}</button>
       </div>
@@ -198,10 +226,19 @@ function PmsTab({ clientId }: { clientId: string }) {
   const [syncing, setSyncing] = useState(false);
   const [syncErr, setSyncErr] = useState<string | null>(null);
   const [syncOk, setSyncOk] = useState(false);
+  const [syncStalled, setSyncStalled] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setErr(null);
-    try { const r = await fetch(`/api/v1/clients/${clientId}/pms`, { headers: { "X-Dashboard-Session": "1" } }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setCon(j.connection); if (!j.connection) setForm(true); }
+    try {
+      const r = await fetch(`/api/v1/clients/${clientId}/pms`, { headers: { "X-Dashboard-Session": "1" } });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error);
+      setCon(j.connection);
+      if (!j.connection) setForm(true);
+      // If the connection is already stuck running (from a previous session), show the stalled banner
+      if (j.connection?.sync_status === "running") setSyncStalled(true);
+    }
     catch (e) { setErr(e instanceof Error ? e.message : "Failed to load"); } finally { setLoading(false); }
   }, [clientId]);
 
@@ -214,14 +251,28 @@ function PmsTab({ clientId }: { clientId: string }) {
     catch (e) { setSaveErr(e instanceof Error ? e.message : "Failed to save"); } finally { setSaving(false); }
   }
 
+  async function resetSync() {
+    setSyncStalled(false); setSyncing(false); setSyncErr(null);
+    await fetch(`/api/v1/clients/${clientId}/pms`, { method: "PATCH", headers: { "X-Dashboard-Session": "1" } });
+    await load();
+  }
+
   async function syncNow() {
-    setSyncing(true); setSyncErr(null); setSyncOk(false);
+    setSyncing(true); setSyncErr(null); setSyncOk(false); setSyncStalled(false);
     try {
       const r = await fetch("/api/v1/pms/sync", { method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ tenant_id: clientId }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error?.message ?? "Sync failed");
-      // Poll until sync_status leaves "running"
+      // Poll until sync_status leaves "running", timeout after 2 minutes
+      let attempts = 0;
+      const MAX_ATTEMPTS = 40; // 40 × 3s = 2 minutes
       const poll = async () => {
+        attempts++;
+        if (attempts > MAX_ATTEMPTS) {
+          setSyncing(false);
+          setSyncStalled(true);
+          return;
+        }
         const pr = await fetch(`/api/v1/clients/${clientId}/pms`, { headers: { "X-Dashboard-Session": "1" } });
         const pj = await pr.json();
         const status = pj.connection?.sync_status;
@@ -262,7 +313,7 @@ function PmsTab({ clientId }: { clientId: string }) {
               </div>
               <span className="text-[11px] text-slate-400">{con.sync_status === "running" || syncing ? <span className="flex items-center gap-1 text-[var(--brand)]"><Loader2 size={10} className="animate-spin" />syncing</span> : con.sync_status === "error" ? <span className="text-red-500">sync error</span> : "idle"}</span>
             </div>
-            <p className="text-[12px] text-slate-500">Last synced: <span className="text-slate-700">{con.last_sync_at ? formatDate(con.last_sync_at) : "Never"}</span></p>
+            <p className="text-[12px] text-slate-500">Last synced: <span className="text-slate-700">{con.last_sync_at ? formatDateTime(con.last_sync_at) : "Never"}</span></p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={syncNow} disabled={syncing} className={cn(btn, "text-[12px]")}>
@@ -273,6 +324,12 @@ function PmsTab({ clientId }: { clientId: string }) {
           </div>
           {syncOk && <p className="text-[12px] text-[#30d158] font-medium">Sync completed successfully.</p>}
           {syncErr && <p className="text-[12px] text-red-500">{syncErr}</p>}
+          {syncStalled && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 space-y-1.5">
+              <p className="text-[12px] text-amber-700 font-medium">Sync is taking longer than expected.</p>
+              <button onClick={resetSync} className="text-[12px] text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Reset sync status</button>
+            </div>
+          )}
         </div>
        ) : (
         <div className="space-y-4">

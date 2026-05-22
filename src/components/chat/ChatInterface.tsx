@@ -11,6 +11,7 @@ import ChatInput, { type AttachedFile } from "./ChatInput";
 import SettingsModal from "@/components/settings/SettingsModal";
 import PerformanceDashboardView from "@/components/performance/PerformanceDashboardView";
 import EmailPerformanceDashboardView from "@/components/email/EmailPerformanceDashboardView";
+import KnowledgeBaseView from "@/components/knowledge/KnowledgeBaseView";
 
 export type Client = {
   id: string;
@@ -41,13 +42,14 @@ export type Message = {
   attachments?: MessageAttachment[];
 };
 
-type WorkspaceView = "chat" | "performance" | "email";
+type WorkspaceView = "chat" | "knowledge" | "performance" | "email";
 
 type Props = {
   initialClients: Client[];
 };
 
 export default function ChatInterface({ initialClients }: Props) {
+  const [clients, setClients] = useState<Client[]>(initialClients);
   const [selectedClient, setSelectedClient] = useState<Client | null>(
     initialClients[0] ?? null
   );
@@ -64,6 +66,25 @@ export default function ChatInterface({ initialClients }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<WorkspaceView>("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const refreshClients = useCallback(() => {
+    fetch("/api/v1/clients", { headers: { "X-Dashboard-Session": "1" } })
+      .then((r) => r.json())
+      .then((j) => {
+        if (Array.isArray(j.clients)) {
+          setClients(j.clients);
+          // If the currently selected client was deactivated, clear the selection
+          setSelectedClient((prev) => {
+            if (!prev) return j.clients[0] ?? null;
+            return j.clients.find((c: Client) => c.id === prev.id) ?? j.clients[0] ?? null;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Fetch clients on mount
+  useEffect(() => { refreshClients(); }, [refreshClients]);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -305,7 +326,7 @@ export default function ChatInterface({ initialClients }: Props) {
       "Conversation")
     : "New conversation";
 
-  const headerTitle = activeView === "performance" ? "Performance" : activeView === "email" ? "Email Performance" : currentTitle;
+  const headerTitle = activeView === "performance" ? "Performance" : activeView === "email" ? "Email Performance" : activeView === "knowledge" ? "Knowledge Base" : currentTitle;
   const showHistory = activeView === "chat";
 
   return (
@@ -340,7 +361,7 @@ export default function ChatInterface({ initialClients }: Props) {
         )}
       >
         <ConversationSidebar
-          clients={initialClients}
+          clients={clients}
           selectedClient={selectedClient}
           onClientChange={handleClientChange}
           onSettingsOpen={() => setSettingsOpen(true)}
@@ -393,6 +414,8 @@ export default function ChatInterface({ initialClients }: Props) {
             <PerformanceDashboardView clientName={selectedClient?.name ?? "Client"} />
           ) : activeView === "email" ? (
             <EmailPerformanceDashboardView clientName={selectedClient?.name ?? ""} />
+          ) : activeView === "knowledge" && selectedClient ? (
+            <KnowledgeBaseView clientId={selectedClient.id} clientName={selectedClient.name} />
           ) : messages.length === 0 && streamingMessage === null && !isLoading ? (
             <EmptyState clientName={selectedClient?.name} onSuggestion={handleSend} />
           ) : (
@@ -468,7 +491,7 @@ export default function ChatInterface({ initialClients }: Props) {
         />
       </div>
 
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onClientsChange={refreshClients} />
     </div>
   );
 }

@@ -90,7 +90,7 @@ export class GuestyAdapter implements PMSAdapter {
   }
 
   private async getAll<T>(path: string, params: Record<string, string> = {}): Promise<T[]> {
-    const PAGE = 25;
+    const PAGE = 100;
     let skip = 0;
     const all: T[] = [];
     while (true) {
@@ -103,8 +103,7 @@ export class GuestyAdapter implements PMSAdapter {
       all.push(...results);
       if (all.length >= data.count || results.length < PAGE) break;
       skip += PAGE;
-      // brief pause between pages to stay within Guesty rate limits
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 200));
     }
     return all;
   }
@@ -145,14 +144,20 @@ export class GuestyAdapter implements PMSAdapter {
 
   async fetchBookings(params?: BookingQueryParams): Promise<PMSBooking[]> {
     const query: Record<string, string> = {};
-    if (params?.since) query.updatedAfter = params.since;
+
+    if (params?.since) {
+      // Guesty v1 filter syntax — simple query params are ignored; must use filters[] array
+      query["filters[0][field]"] = "lastUpdatedAt";
+      query["filters[0][operator]"] = "gte";
+      query["filters[0][value]"] = params.since;
+    }
 
     const results = await this.getAll<unknown>("/reservations", query);
     return results.map((r: unknown) => {
       const res = r as Record<string, unknown>;
       const money = (res.money ?? {}) as Record<string, unknown>;
       const listing = (res.listing ?? {}) as Record<string, unknown>;
-      const guests = (res.guests ?? {}) as Record<string, unknown>;
+      const guestsField = (res.guests ?? {}) as Record<string, unknown>;
 
       // Guesty returns listingId as a top-level field OR nested under listing._id
       const propertyExternalId = String(
@@ -165,9 +170,13 @@ export class GuestyAdapter implements PMSAdapter {
         money.hostPayout ?? money.totalRevenue ?? 0
       );
 
-      // Guest count: top-level or nested
+      // Guest count: top-level or nested; guests object may have adults/children
       const guestCount = Number(
-        res.guestsCount ?? res.guestCount ?? guests.count ?? guests.total ?? 0
+        res.guestsCount ?? res.numberOfGuests ?? res.guestCount ??
+        guestsField.count ?? guestsField.total ??
+        ((guestsField.adults !== undefined)
+          ? Number(guestsField.adults ?? 0) + Number(guestsField.children ?? 0)
+          : undefined) ?? 0
       );
 
       // Dates: localized versions are more reliable
@@ -178,15 +187,21 @@ export class GuestyAdapter implements PMSAdapter {
         res.checkOutDateLocalized ?? res.checkOut ?? res.checkOutDate ?? ""
       );
 
-      // Booking source / channel
-      const platform = String(
-        res.source ?? res.channel ?? res.integration ?? "direct"
-      );
+      // Platform/channel: Guesty returns channel as { _id, name } object, not a string
+      const channelRaw = res.source ?? res.channel ?? res.integration;
+      const platform = channelRaw == null
+        ? "direct"
+        : typeof channelRaw === "object"
+          ? String((channelRaw as Record<string, unknown>).name ?? (channelRaw as Record<string, unknown>)._id ?? "direct")
+          : String(channelRaw || "direct");
+
+      // Status: try multiple field names
+      const status = String(res.status ?? res.reservationStatus ?? res.type ?? "");
 
       return {
         externalId: String(res._id ?? res.id ?? ""),
         propertyExternalId,
-        status: String(res.status ?? ""),
+        status,
         checkIn,
         checkOut,
         guests: guestCount,

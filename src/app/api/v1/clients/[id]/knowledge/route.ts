@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/service";
 import { extractDriveFileId } from "@/lib/google-drive/client";
@@ -18,7 +19,7 @@ export async function GET(
 
   const { data, error } = await db
     .from("knowledge_documents")
-    .select("id, name, google_doc_url, mime_type, status, last_modified_at, created_at")
+    .select("id, name, google_doc_url, mime_type, status, error_msg, last_modified_at, created_at")
     .eq("tenant_id", id)
     .order("created_at", { ascending: false });
 
@@ -66,10 +67,9 @@ export async function POST(
 
     if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
 
-    // Kick off sync without blocking the response
-    syncDocument(doc.id).catch((err) =>
+    after(() => syncDocument(doc.id).catch((err) =>
       console.error(`[knowledge] Sync failed for doc ${doc.id}:`, err)
-    );
+    ));
 
     return NextResponse.json({ doc }, { status: 201 });
   } else {
@@ -88,11 +88,39 @@ export async function POST(
 
     if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
 
-    // Kick off sync without blocking the response
-    syncDocument(doc.id).catch((err) =>
+    after(() => syncDocument(doc.id).catch((err) =>
       console.error(`[knowledge] Sync failed for doc ${doc.id}:`, err)
-    );
+    ));
 
     return NextResponse.json({ doc }, { status: 201 });
   }
+}
+
+// PATCH — re-trigger sync for all pending/error docs belonging to this tenant
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!isDashboard(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const db = getServiceClient();
+
+  const { data: docs } = await db
+    .from("knowledge_documents")
+    .select("id")
+    .eq("tenant_id", id)
+    .in("status", ["pending", "error"]);
+
+  if (!docs?.length) return NextResponse.json({ queued: 0 });
+
+  after(async () => {
+    for (const doc of docs) {
+      await syncDocument(doc.id).catch((err) =>
+        console.error(`[knowledge] Retry failed for doc ${doc.id}:`, err)
+      );
+    }
+  });
+
+  return NextResponse.json({ queued: docs.length });
 }

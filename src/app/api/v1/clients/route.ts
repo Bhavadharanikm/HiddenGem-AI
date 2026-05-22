@@ -11,10 +11,13 @@ export async function GET(req: NextRequest) {
   if (!isDashboard(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const db = getServiceClient();
-  const { data, error } = await db
+  const includeAll = req.nextUrl.searchParams.get("all") === "1";
+  let query = db
     .from("tenants")
     .select("id, name, slug, system_prompt, is_active, created_at")
     .order("name");
+  if (!includeAll) query = query.eq("is_active", true);
+  const { data, error } = await query;
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ clients: data });

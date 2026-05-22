@@ -18,6 +18,7 @@ import ClientSettingsPanel, { type ClientRecord } from "./ClientSettingsPanel";
 type Props = {
   open: boolean;
   onClose: () => void;
+  onClientsChange?: () => void;
 };
 
 const SWATCH_COLORS = [
@@ -422,7 +423,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
 // Main: SettingsModal
 // ─────────────────────────────────────────────────────────────
 
-export default function SettingsModal({ open, onClose }: Props) {
+export default function SettingsModal({ open, onClose, onClientsChange }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [clients, setClients] = useState<ClientRecord[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -444,7 +445,7 @@ export default function SettingsModal({ open, onClose }: Props) {
   const fetchClients = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/clients", { headers: { "X-Dashboard-Session": "1" } });
+      const res = await fetch("/api/v1/clients?all=1", { headers: { "X-Dashboard-Session": "1" } });
       const json = await res.json();
       if (res.ok) {
         const fetched: ClientRecord[] = json.clients ?? [];
@@ -466,8 +467,9 @@ export default function SettingsModal({ open, onClose }: Props) {
     setShowAddForm(false);
   }
 
-  function handleClientUpdated(updated: ClientRecord) {
+  function handleClientUpdated(updated: ClientRecord, previous: ClientRecord) {
     setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    if (updated.is_active !== previous.is_active) onClientsChange?.();
   }
 
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
@@ -497,7 +499,7 @@ export default function SettingsModal({ open, onClose }: Props) {
                 <Gem size={14} className="text-[var(--brand)]" strokeWidth={1.5} />
               </div>
               <div>
-                <p className="text-[13px] font-semibold text-slate-900 leading-none">HiddenGem</p>
+                <p className="text-[13px] font-semibold text-slate-900 leading-none">HiddenGem AI</p>
                 <p className="text-[10px] uppercase tracking-[0.12em] text-slate-400 mt-0.5">Settings</p>
               </div>
             </div>
@@ -540,9 +542,12 @@ export default function SettingsModal({ open, onClose }: Props) {
                     <div className={cn("w-6 h-6 rounded-lg border flex items-center justify-center flex-shrink-0 text-[10px] font-semibold", swatch)}>
                       {getInitials(client.name)}
                     </div>
-                    <span className={cn("text-[12px] truncate font-medium", isSelected ? "text-slate-900" : "text-slate-600")}>
+                    <span className={cn("text-[12px] truncate font-medium flex-1", isSelected ? "text-slate-900" : "text-slate-600")}>
                       {client.name}
                     </span>
+                    {!client.is_active && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex-shrink-0">off</span>
+                    )}
                   </button>
                 );
               })
@@ -578,7 +583,7 @@ export default function SettingsModal({ open, onClose }: Props) {
             </>
           ) : selectedClient ? (
             <div className="flex-1 overflow-y-auto p-5 sm:p-6">
-              <ClientSettingsPanel key={selectedClient.id} client={selectedClient} clientIndex={selectedIndex} onUpdate={handleClientUpdated} />
+              <ClientSettingsPanel key={selectedClient.id} client={selectedClient} clientIndex={selectedIndex} onUpdate={(updated) => handleClientUpdated(updated, selectedClient)} />
             </div>
           ) : loading ? (
             <div className="flex-1 flex items-center justify-center">

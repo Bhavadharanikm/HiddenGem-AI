@@ -1,13 +1,6 @@
-import OpenAI from "openai";
 import { getServiceClient } from "@/lib/supabase/service";
-import { fetchDocumentContent, getFileMetadata } from "./client";
 
-let _openai: OpenAI | null = null;
-function getOpenAI() {
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return _openai;
-}
-const CHUNK_SIZE = 400; // tokens (~1600 chars)
+const CHUNK_SIZE = 400;
 const CHUNK_OVERLAP = 50;
 
 function chunkText(text: string): string[] {
@@ -20,14 +13,6 @@ function chunkText(text: string): string[] {
     i += CHUNK_SIZE - CHUNK_OVERLAP;
   }
   return chunks.filter((c) => c.trim().length > 20);
-}
-
-async function embedChunks(texts: string[]): Promise<number[][]> {
-  const res = await getOpenAI().embeddings.create({
-    model: "text-embedding-3-small",
-    input: texts,
-  });
-  return res.data.map((d) => d.embedding);
 }
 
 /** Sync a single knowledge document: fetch content, chunk, embed, upsert. */
@@ -43,7 +28,7 @@ export async function syncDocument(documentId: string): Promise<void> {
 
   const { data: doc, error: docErr } = await db
     .from("knowledge_documents")
-    .select("*, google_drive_connections(access_token, refresh_token)")
+    .select("*")
     .eq("id", documentId)
     .single();
 
@@ -52,28 +37,23 @@ export async function syncDocument(documentId: string): Promise<void> {
     throw new Error("Document not found");
   }
 
-  const conn = (doc as unknown as { google_drive_connections: { access_token: string; refresh_token: string } | null }).google_drive_connections;
-
-  if (!conn) {
-    await setError("Google Drive is not connected for this client. Connect it under Settings → Google Drive.");
-    throw new Error("Google Drive not connected");
-  }
-
   await db
     .from("knowledge_documents")
     .update({ status: "processing" })
     .eq("id", documentId);
 
   try {
-    const content = await fetchDocumentContent(
-      conn.access_token,
-      conn.refresh_token,
-      doc.google_drive_id,
-      doc.mime_type ?? "application/vnd.google-apps.document"
-    );
+    const exportUrl = `https://docs.google.com/document/d/${doc.google_drive_id}/export?format=txt`;
+    const res = await fetch(exportUrl);
+    if (!res.ok) {
+      throw new Error("Could not fetch document. Make sure the link is set to 'Anyone with the link can view'.");
+    }
+    const content = await res.text();
+    if (!content.trim()) {
+      throw new Error("Document appears to be empty.");
+    }
 
     const chunks = chunkText(content);
-    const embeddings = await embedChunks(chunks);
 
     // Delete old chunks
     await db.from("knowledge_chunks").delete().eq("document_id", documentId);
@@ -85,7 +65,6 @@ export async function syncDocument(documentId: string): Promise<void> {
       chunk_index: i,
       content: text,
       token_count: Math.round(text.split(/\s+/).length * 1.3),
-      embedding: JSON.stringify(embeddings[i]),
     }));
 
     const { error: insertErr } = await db
@@ -108,7 +87,7 @@ export async function syncDocument(documentId: string): Promise<void> {
   }
 }
 
-/** Check all tenant docs for changes and re-sync modified ones. */
+/** Re-sync all pending/error docs and check ready docs for updates. */
 export async function syncTenantDocuments(tenantId: string): Promise<{
   synced: number;
   unchanged: number;
@@ -116,39 +95,31 @@ export async function syncTenantDocuments(tenantId: string): Promise<{
 }> {
   const db = getServiceClient();
 
-  const { data: conn } = await db
-    .from("google_drive_connections")
-    .select("access_token, refresh_token")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-
-  if (!conn) return { synced: 0, unchanged: 0, errors: 0 };
-
   const { data: docs } = await db
     .from("knowledge_documents")
-    .select("id, google_drive_id, mime_type, last_modified_at, status")
+    .select("id, google_drive_id, last_modified_at, status")
     .eq("tenant_id", tenantId)
     .in("status", ["ready", "pending", "error"]);
 
   if (!docs?.length) return { synced: 0, unchanged: 0, errors: 0 };
 
-  const c = conn as { access_token: string; refresh_token: string };
   let synced = 0, unchanged = 0, errors = 0;
 
   for (const doc of docs) {
     try {
-      // Skip change-detection for pending/error docs — always re-sync them
-      if (doc.status === "ready") {
-        const meta = await getFileMetadata(c.access_token, c.refresh_token, doc.google_drive_id);
-        const remoteModified = meta.modifiedTime ? new Date(meta.modifiedTime) : null;
-        const localModified = doc.last_modified_at ? new Date(doc.last_modified_at) : null;
-
-        if (remoteModified && localModified && remoteModified <= localModified) {
-          unchanged++;
-          continue;
+      // For ready docs, check if the public doc has been modified
+      if (doc.status === "ready" && doc.last_modified_at) {
+        const headRes = await fetch(
+          `https://docs.google.com/document/d/${doc.google_drive_id}/export?format=txt`,
+          { method: "HEAD" }
+        );
+        const lastModified = headRes.headers.get("last-modified");
+        if (lastModified) {
+          const remoteModified = new Date(lastModified);
+          const localModified = new Date(doc.last_modified_at);
+          if (remoteModified <= localModified) { unchanged++; continue; }
         }
       }
-
       await syncDocument(doc.id);
       synced++;
     } catch {

@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import OpenAI from "openai";
 import { getServiceClient } from "@/lib/supabase/service";
 import { assembleSystemPrompt } from "./context-assembler";
 import { ALL_TOOLS, executeTool } from "./tools";
@@ -11,70 +10,11 @@ function getAnthropic() {
   return _anthropic;
 }
 
-let _openai: OpenAI | null = null;
-function getOpenAI() {
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return _openai;
-}
-
 // True when Supabase is not configured — agent runs without DB persistence
 function isSupabaseConfigured() {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// 400/402 from Anthropic = billing or auth problem — fall back to OpenAI
-function isAnthropicUnavailable(err: unknown): boolean {
-  if (err !== null && typeof err === "object" && "status" in err) {
-    const s = (err as { status: number }).status;
-    return s === 400 || s === 402 || s === 401;
-  }
-  return false;
-}
-
-// Convert Anthropic MessageParams to simple OpenAI role/content pairs
-function toOpenAIMessages(msgs: MessageParam[]): OpenAI.Chat.ChatCompletionMessageParam[] {
-  return msgs
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content:
-        typeof m.content === "string"
-          ? m.content
-          : (m.content as Array<{ type: string; text?: string }>)
-              .filter((b) => b.type === "text" && b.text)
-              .map((b) => (b as { text: string }).text)
-              .join(""),
-    }));
-}
-
-async function* streamWithOpenAI(
-  messages: MessageParam[],
-  systemPrompt: string
-): AsyncGenerator<{ type: "delta"; text: string }> {
-  try {
-    const stream = await getOpenAI().chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "system", content: systemPrompt }, ...toOpenAIMessages(messages)],
-      stream: true,
-    });
-    for await (const chunk of stream) {
-      const text = chunk.choices[0]?.delta?.content ?? "";
-      if (text) yield { type: "delta" as const, text };
-    }
-  } catch (err) {
-    const status = err !== null && typeof err === "object" && "status" in err
-      ? (err as { status: number }).status : 0;
-    if (status === 429) {
-      throw new Error(
-        "Both AI providers are out of credits. Add API credits at platform.openai.com/settings/billing or console.anthropic.com/settings/billing — these are separate from ChatGPT/Claude app subscriptions."
-      );
-    }
-    if (status === 401) {
-      throw new Error("OpenAI API key is invalid. Check OPENAI_API_KEY in your Netlify environment variables.");
-    }
-    throw err;
-  }
-}
 function buildUserContent(text: string, attachments: AgentAttachment[] = []): MessageParam["content"] {
   if (!attachments.length) return text;
   const blocks: Anthropic.MessageParam["content"] = attachments.map((att) => {
@@ -378,14 +318,6 @@ export async function* runAgentStream(
         continue;
       }
     } catch (err) {
-      // Anthropic unavailable (billing, auth) — fall back to OpenAI if configured
-      if (isAnthropicUnavailable(err) && process.env.OPENAI_API_KEY) {
-        for await (const evt of streamWithOpenAI(messages, systemPrompt)) {
-          fullContent += evt.text;
-          yield evt;
-        }
-        break;
-      }
       throw err;
     }
     break;
