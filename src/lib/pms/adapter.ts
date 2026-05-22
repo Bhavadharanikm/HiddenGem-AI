@@ -1,4 +1,7 @@
-export type PMSProvider = "guesty" | "hostaway" | "lodgify" | "custom";
+export type PMSProvider =
+  | "guesty" | "hostaway" | "lodgify" | "hostfully"
+  | "ownerrez" | "igms" | "smoobu" | "beds24"
+  | "streamline" | "liverez" | "track" | "custom";
 
 export interface PMSAddress {
   street?: string;

@@ -8,28 +8,94 @@ import type {
 
 type HostawayCredentials = {
   accountId: string;
-  apiKey: string;
+  apiKey: string; // client_secret used in OAuth2 client_credentials flow
 };
 
 const BASE_URL = "https://api.hostaway.com/v1";
+const TOKEN_URL = "https://api.hostaway.com/v1/accessTokens";
+
+const STATUS_MAP: Record<string, string> = {
+  new:        "confirmed",
+  modified:   "confirmed",
+  cancelled:  "cancelled",
+  blocked:    "blocked",
+  inquiry:    "inquiry",
+  declined:   "cancelled",
+};
 
 export class HostawayAdapter implements PMSAdapter {
   readonly provider = "hostaway" as const;
+  private accessToken: string | null = null;
+  private tokenExpiry = 0;
 
   constructor(private credentials: HostawayCredentials) {}
 
-  private async get<T>(path: string, params?: Record<string, string>): Promise<T> {
+  private async getToken(): Promise<string> {
+    if (this.accessToken && Date.now() < this.tokenExpiry) return this.accessToken;
+
+    const res = await fetch(TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: this.credentials.accountId,
+        client_secret: this.credentials.apiKey,
+        scope: "general",
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Hostaway auth failed (${res.status}): ${text.slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    this.accessToken = data.access_token;
+    this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+    return this.accessToken!;
+  }
+
+  private async get<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+    const token = await this.getToken();
     const url = new URL(`${BASE_URL}${path}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
     const res = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${this.credentials.apiKey}`,
+        Authorization: `Bearer ${token}`,
         "Cache-Control": "no-cache",
       },
     });
-    if (!res.ok) throw new Error(`Hostaway API error ${res.status}: ${path}`);
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Hostaway API error ${res.status}: ${path} — ${text.slice(0, 200)}`);
+    }
+
     const json = await res.json();
     return json.result ?? json;
+  }
+
+  private async getAll<T>(path: string, params: Record<string, string> = {}): Promise<T[]> {
+    const LIMIT = 100;
+    let offset = 0;
+    const all: T[] = [];
+
+    while (true) {
+      const page = await this.get<T[]>(path, {
+        ...params,
+        limit: String(LIMIT),
+        offset: String(offset),
+      });
+
+      const results = Array.isArray(page) ? page : [];
+      all.push(...results);
+      if (results.length < LIMIT) break;
+      offset += LIMIT;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+
+    return all;
   }
 
   async testConnection() {
@@ -42,8 +108,9 @@ export class HostawayAdapter implements PMSAdapter {
   }
 
   async fetchProperties(): Promise<PMSProperty[]> {
-    const data = await this.get<unknown[]>("/listings");
-    return (data ?? []).map((l: unknown) => {
+    const results = await this.getAll<unknown>("/listings");
+
+    return results.map((l: unknown) => {
       const listing = l as Record<string, unknown>;
       return {
         externalId: String(listing.id ?? ""),
@@ -58,9 +125,7 @@ export class HostawayAdapter implements PMSAdapter {
         },
         bedrooms: Number(listing.bedroomsNumber ?? 0),
         bathrooms: Number(listing.bathroomsNumber ?? 0),
-        amenities: Array.isArray(listing.amenities)
-          ? listing.amenities.map(String)
-          : [],
+        amenities: Array.isArray(listing.amenities) ? listing.amenities.map(String) : [],
         basePrice: Number(listing.basePrice ?? 0),
         currency: String(listing.currencyCode ?? "USD"),
         rawData: listing,
@@ -69,31 +134,20 @@ export class HostawayAdapter implements PMSAdapter {
   }
 
   async fetchBookings(params?: BookingQueryParams): Promise<PMSBooking[]> {
-    const query: Record<string, string> = {
-      limit: String(params?.limit ?? 100),
-      sortOrder: "desc",
-    };
+    const query: Record<string, string> = { sortOrder: "desc" };
     if (params?.since) {
-      // Hostaway uses Unix timestamps
       query.modifiedFrom = String(Math.floor(new Date(params.since).getTime() / 1000));
     }
 
-    const data = await this.get<unknown[]>("/reservations", query);
+    const results = await this.getAll<unknown>("/reservations", query);
 
-    // Hostaway status vocabulary differs from Guesty
-    const statusMap: Record<string, string> = {
-      new: "confirmed",
-      cancelled: "cancelled",
-      blocked: "blocked",
-      inquiry: "inquiry",
-    };
-
-    return (data ?? []).map((r: unknown) => {
+    return results.map((r: unknown) => {
       const res = r as Record<string, unknown>;
+      const rawStatus = String(res.status ?? "");
       return {
         externalId: String(res.id ?? ""),
         propertyExternalId: String(res.listingId ?? ""),
-        status: statusMap[String(res.status ?? "")] ?? String(res.status ?? ""),
+        status: STATUS_MAP[rawStatus] ?? rawStatus,
         checkIn: new Date(Number(res.arrivalDate) * 1000).toISOString().split("T")[0],
         checkOut: new Date(Number(res.departureDate) * 1000).toISOString().split("T")[0],
         guests: Number(res.guestCount ?? 0),
@@ -105,7 +159,6 @@ export class HostawayAdapter implements PMSAdapter {
   }
 
   async fetchReviews(_propertyId: string): Promise<PMSReview[]> {
-    // Hostaway reviews endpoint varies by plan
     return [];
   }
 }
