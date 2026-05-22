@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import ChatInterface from "@/components/chat/ChatInterface";
 import { getServiceClient } from "@/lib/supabase/service";
 
