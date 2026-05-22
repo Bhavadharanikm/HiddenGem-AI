@@ -74,6 +74,8 @@ export async function POST(req: NextRequest) {
               tenant_id: tenantId, connection_id: conn.id, external_id: p.externalId,
               name: p.name, address: p.address as unknown as import("@/types/database").Json, bedrooms: p.bedrooms, bathrooms: p.bathrooms,
               amenities: p.amenities, base_price: p.basePrice, currency: p.currency,
+              raw_data: p.rawData as unknown as import("@/types/database").Json,
+              synced_at: new Date().toISOString(),
             }));
             for (let i = 0; i < propRows.length; i += 100) {
               await db.from("pms_properties").upsert(propRows.slice(i, i + 100), { onConflict: "connection_id,external_id" });
@@ -89,7 +91,9 @@ export async function POST(req: NextRequest) {
             const bookingRows = bookings.filter((b) => propIdMap[b.propertyExternalId]).map((b) => ({
               tenant_id: tenantId, property_id: propIdMap[b.propertyExternalId], external_id: b.externalId,
               status: b.status, check_in: b.checkIn || null, check_out: b.checkOut || null,
-              guests: b.guests, total_revenue: b.totalRevenue, platform: b.platform, raw_data: b.rawData as unknown as import("@/types/database").Json,
+              guests: b.guests, total_revenue: b.totalRevenue, platform: b.platform,
+              raw_data: b.rawData as unknown as import("@/types/database").Json,
+              synced_at: new Date().toISOString(),
             }));
             for (let i = 0; i < bookingRows.length; i += 100) {
               await db.from("pms_bookings").upsert(bookingRows.slice(i, i + 100), { onConflict: "property_id,external_id" });

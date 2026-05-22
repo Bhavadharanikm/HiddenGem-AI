@@ -121,14 +121,17 @@ export class GuestyAdapter implements PMSAdapter {
   }
 
   async fetchProperties(): Promise<PMSProperty[]> {
-    const results = await this.getAll<unknown>("/listings");
+    const results = await this.getAll<unknown>("/listings", {
+      // Without explicit fields, Guesty omits bedrooms, bathrooms, pictures, prices, etc.
+      fields: "_id title nickname accommodates bedrooms bathrooms address prices amenities pictures publicDescription tags active isListed",
+    });
     return results.map((l: unknown) => {
       const listing = l as Record<string, unknown>;
       const address = (listing.address ?? {}) as Record<string, unknown>;
       const prices = (listing.prices ?? listing.pricing ?? {}) as Record<string, unknown>;
       return {
         externalId: String(listing._id ?? ""),
-        name: String(listing.title ?? listing.name ?? listing.nickname ?? ""),
+        name: String(listing.nickname ?? listing.title ?? listing.name ?? ""),
         address: {
           street: String(address.street ?? address.full ?? ""),
           city: String(address.city ?? ""),

@@ -52,12 +52,14 @@ export default async function handler(req: Request) {
           connection_id: conn.id,
           external_id: p.externalId,
           name: p.name,
-          address: p.address,
+          address: p.address as unknown as import("../../src/types/database").Json,
           bedrooms: p.bedrooms,
           bathrooms: p.bathrooms,
           amenities: p.amenities,
           base_price: p.basePrice,
           currency: p.currency,
+          raw_data: p.rawData as unknown as import("../../src/types/database").Json,
+          synced_at: new Date().toISOString(),
         }));
         for (let i = 0; i < propRows.length; i += 100) {
           await db
@@ -97,6 +99,7 @@ export default async function handler(req: Request) {
             total_revenue: b.totalRevenue,
             platform: b.platform,
             raw_data: b.rawData as unknown as import("../../src/types/database").Json,
+            synced_at: new Date().toISOString(),
           }));
         for (let i = 0; i < bookingRows.length; i += 100) {
           await db
