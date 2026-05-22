@@ -1,4 +1,3 @@
-import { createHmac } from "crypto";
 import { getServiceClient } from "@/lib/supabase/service";
 import type { WebhookEventType, WebhookPayload } from "./events";
 
@@ -40,6 +39,13 @@ export async function dispatchWebhook(
   await db.from("webhook_deliveries").insert(rows);
 }
 
+async function hmacSha256(secret: string, data: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 /** Deliver a single pending webhook_delivery row. Called by the Edge Function. */
 export async function deliverWebhook(deliveryId: string): Promise<void> {
   const db = getServiceClient();
@@ -56,9 +62,7 @@ export async function deliverWebhook(deliveryId: string): Promise<void> {
 
   const payloadStr = JSON.stringify(delivery.payload);
   const timestamp = Math.floor(Date.now() / 1000).toString();
-  const signature = `sha256=${createHmac("sha256", endpoint.secret)
-    .update(`${timestamp}.${payloadStr}`)
-    .digest("hex")}`;
+  const signature = `sha256=${await hmacSha256(endpoint.secret, `${timestamp}.${payloadStr}`)}`;
 
   let responseStatus = 0;
   let responseBody = "";

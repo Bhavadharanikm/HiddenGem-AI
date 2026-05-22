@@ -56,7 +56,7 @@ function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: 
   const isDirty = name !== client.name || slug !== client.slug || sp !== (client.system_prompt ?? "") || active !== client.is_active;
 
   async function save() {
-    if (!name.trim() || !slug.trim()) { setErr("Name and slug are required"); return; }
+    if (!name.trim()) { setErr("Name is required"); return; }
     setSaving(true); setErr(null); setOk(false);
     try {
       const res = await fetch(`/api/v1/clients/${client.id}`, { method: "PUT", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ name, slug, system_prompt: sp || null, is_active: active }) });
@@ -70,8 +70,6 @@ function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: 
   return (
     <div className="space-y-4">
       <div><label className={lbl}>Client name</label><input value={name} onChange={(e) => { setName(e.target.value); setSlug(toSlug(e.target.value)); }} className={field} /></div>
-      <div><label className={lbl}>Slug</label><input value={slug} onChange={(e) => setSlug(e.target.value)} className={cn(field, "font-mono")} /><p className="text-[11px] text-slate-400 mt-1">Lowercase, hyphens only</p></div>
-      <div><label className={lbl}>AI system prompt</label><textarea value={sp} onChange={(e) => setSp(e.target.value)} rows={4} placeholder="You are the AI assistant for [Client Name]..." className={cn(field, "resize-none leading-relaxed")} /></div>
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => setActive((v) => !v)} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] rounded">
           {active ? <ToggleRight size={22} className="text-[var(--brand)]" /> : <ToggleLeft size={22} className="text-slate-300" />}
@@ -222,12 +220,29 @@ function PmsTab({ clientId }: { clientId: string }) {
       const r = await fetch("/api/v1/pms/sync", { method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ tenant_id: clientId }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error?.message ?? "Sync failed");
-      if (j.data?.errors?.length) throw new Error(j.data.errors[0]);
-      await load();
-      setSyncOk(true);
-      setTimeout(() => setSyncOk(false), 4000);
-    } catch (e) { setSyncErr(e instanceof Error ? e.message : "Sync failed"); }
-    finally { setSyncing(false); }
+      // Poll until sync_status leaves "running"
+      const poll = async () => {
+        const pr = await fetch(`/api/v1/clients/${clientId}/pms`, { headers: { "X-Dashboard-Session": "1" } });
+        const pj = await pr.json();
+        const status = pj.connection?.sync_status;
+        if (status === "running") {
+          setTimeout(poll, 3000);
+        } else {
+          await load();
+          setSyncing(false);
+          if (status === "error") {
+            setSyncErr("Sync encountered an error. Check credentials and try again.");
+          } else {
+            setSyncOk(true);
+            setTimeout(() => setSyncOk(false), 4000);
+          }
+        }
+      };
+      setTimeout(poll, 3000);
+    } catch (e) {
+      setSyncErr(e instanceof Error ? e.message : "Sync failed");
+      setSyncing(false);
+    }
   }
 
   const provLabel = con ? PMS_PROVIDERS.find((p) => p.value === con.provider)?.label ?? con.provider : "";
@@ -252,7 +267,7 @@ function PmsTab({ clientId }: { clientId: string }) {
           <div className="flex items-center gap-3">
             <button onClick={syncNow} disabled={syncing} className={cn(btn, "text-[12px]")}>
               {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} strokeWidth={2.5} />}
-              {syncing ? "Syncing…" : "Sync now"}
+              {syncing ? "Syncing in background…" : "Sync now"}
             </button>
             <button onClick={() => setForm(true)} className="text-[12px] text-slate-400 hover:text-slate-600 underline underline-offset-2 transition-colors">Update credentials</button>
           </div>
@@ -323,7 +338,6 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: P
         <div className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 text-[13px] font-semibold", swatch)}>{getInitials(client.name)}</div>
         <div className="flex-1 min-w-0">
           <p className="text-[16px] font-semibold text-slate-900 truncate leading-tight">{client.name}</p>
-          <p className="text-[11px] text-slate-400 font-mono truncate">{client.slug}</p>
         </div>
         <span className={cn("text-[11px] px-2.5 py-0.5 rounded-full border flex-shrink-0 font-medium", client.is_active ? "bg-[rgba(48,209,88,0.1)] text-[#30d158] border-[rgba(48,209,88,0.2)]" : "bg-slate-100 text-slate-400 border-slate-200")}>
           {client.is_active ? "active" : "inactive"}

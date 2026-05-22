@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { NextRequest } from "next/server";
 import { validateApiKey } from "@/lib/api/auth";
 import { error, ok } from "@/lib/api/response";
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   } else {
     const auth = await validateApiKey(req);
     if (!auth) return error("UNAUTHORIZED", "Invalid or missing API key");
-    tenantId = tenantId;
+    tenantId = auth.tenantId;
   }
 
   const db = getServiceClient();
@@ -31,122 +32,121 @@ export async function POST(req: NextRequest) {
     .eq("is_active", true);
 
   if (!connections?.length) {
-    return ok({ synced: 0, message: "No active PMS connections" });
+    return ok({ started: false, message: "No active PMS connections" });
   }
 
-  let totalProperties = 0;
-  let totalBookings = 0;
-  const syncErrors: string[] = [];
+  // Mark all connections as running immediately so the UI can reflect status
+  await db
+    .from("pms_connections")
+    .update({ sync_status: "running" })
+    .in("id", connections.map((c) => c.id));
 
-  for (const conn of connections) {
-    try {
-      await db
-        .from("pms_connections")
-        .update({ sync_status: "running" })
-        .eq("id", conn.id);
+  // Run the actual sync after the response is sent — browser connection not required
+  after(async () => {
+    let totalProperties = 0;
+    let totalBookings = 0;
 
-      const adapter = createPMSAdapter(
-        conn.provider as PMSProvider,
-        conn.credentials as Record<string, string>
-      );
+    for (const conn of connections) {
+      try {
+        const adapter = createPMSAdapter(
+          conn.provider as PMSProvider,
+          conn.credentials as Record<string, string>
+        );
 
-      // Fetch and upsert properties
-      const properties = await adapter.fetchProperties();
-      for (const prop of properties) {
-        const { data: upserted } = await db
-          .from("pms_properties")
-          .upsert(
+        const properties = await adapter.fetchProperties();
+        for (const prop of properties) {
+          const { data: upserted } = await db
+            .from("pms_properties")
+            .upsert(
+              {
+                tenant_id: tenantId,
+                connection_id: conn.id,
+                external_id: prop.externalId,
+                name: prop.name,
+                address: prop.address as Json,
+                bedrooms: prop.bedrooms,
+                bathrooms: prop.bathrooms,
+                amenities: prop.amenities,
+                base_price: prop.basePrice,
+                currency: prop.currency,
+                raw_data: prop.rawData as Json,
+              },
+              { onConflict: "connection_id,external_id" }
+            )
+            .select("id")
+            .single();
+          totalProperties++;
+
+          const reviews = await adapter.fetchReviews(prop.externalId).catch(() => []);
+          for (const rev of reviews) {
+            await db.from("pms_reviews").upsert(
+              {
+                tenant_id: tenantId,
+                property_id: (upserted as { id: string }).id,
+                external_id: rev.externalId,
+                rating: rev.rating,
+                reviewer_name: rev.reviewerName,
+                review_text: rev.reviewText,
+                response_text: rev.responseText,
+                review_date: rev.reviewDate,
+                raw_data: rev.rawData as Json,
+              },
+              { onConflict: "property_id,external_id" }
+            );
+          }
+        }
+
+        const bookings = await adapter.fetchBookings({
+          since: conn.last_sync_at ?? undefined,
+        });
+
+        for (const booking of bookings) {
+          const { data: propRow } = await db
+            .from("pms_properties")
+            .select("id")
+            .eq("tenant_id", tenantId)
+            .eq("external_id", booking.propertyExternalId)
+            .maybeSingle();
+
+          if (!propRow) continue;
+
+          await db.from("pms_bookings").upsert(
             {
               tenant_id: tenantId,
-              connection_id: conn.id,
-              external_id: prop.externalId,
-              name: prop.name,
-              address: prop.address as Json,
-              bedrooms: prop.bedrooms,
-              bathrooms: prop.bathrooms,
-              amenities: prop.amenities,
-              base_price: prop.basePrice,
-              currency: prop.currency,
-              raw_data: prop.rawData as Json,
-            },
-            { onConflict: "connection_id,external_id" }
-          )
-          .select("id")
-          .single();
-        totalProperties++;
-
-        // Fetch reviews per property
-        const reviews = await adapter.fetchReviews(prop.externalId).catch(() => []);
-        for (const rev of reviews) {
-          await db.from("pms_reviews").upsert(
-            {
-              tenant_id: tenantId,
-              property_id: (upserted as { id: string }).id,
-              external_id: rev.externalId,
-              rating: rev.rating,
-              reviewer_name: rev.reviewerName,
-              review_text: rev.reviewText,
-              response_text: rev.responseText,
-              review_date: rev.reviewDate,
-              raw_data: rev.rawData as Json,
+              property_id: (propRow as { id: string }).id,
+              external_id: booking.externalId,
+              status: booking.status,
+              check_in: booking.checkIn,
+              check_out: booking.checkOut,
+              guests: booking.guests,
+              total_revenue: booking.totalRevenue,
+              platform: booking.platform,
+              raw_data: booking.rawData as Json,
             },
             { onConflict: "property_id,external_id" }
           );
+          totalBookings++;
         }
+
+        await db
+          .from("pms_connections")
+          .update({ sync_status: "idle", last_sync_at: new Date().toISOString() })
+          .eq("id", conn.id);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[pms/sync] connection ${conn.id}:`, msg);
+        await db
+          .from("pms_connections")
+          .update({ sync_status: "error" })
+          .eq("id", conn.id);
       }
-
-      // Fetch delta bookings
-      const bookings = await adapter.fetchBookings({
-        since: conn.last_sync_at ?? undefined,
-      });
-
-      for (const booking of bookings) {
-        const { data: propRow } = await db
-          .from("pms_properties")
-          .select("id")
-          .eq("tenant_id", tenantId)
-          .eq("external_id", booking.propertyExternalId)
-          .maybeSingle();
-
-        if (!propRow) continue;
-
-        await db.from("pms_bookings").upsert(
-          {
-            tenant_id: tenantId,
-            property_id: (propRow as { id: string }).id,
-            external_id: booking.externalId,
-            status: booking.status,
-            check_in: booking.checkIn,
-            check_out: booking.checkOut,
-            guests: booking.guests,
-            total_revenue: booking.totalRevenue,
-            platform: booking.platform,
-            raw_data: booking.rawData as Json,
-          },
-          { onConflict: "property_id,external_id" }
-        );
-        totalBookings++;
-      }
-
-      await db
-        .from("pms_connections")
-        .update({ sync_status: "idle", last_sync_at: new Date().toISOString() })
-        .eq("id", conn.id);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[pms/sync] connection ${conn.id}:`, msg);
-      syncErrors.push(msg);
-      await db
-        .from("pms_connections")
-        .update({ sync_status: "error" })
-        .eq("id", conn.id);
     }
-  }
 
-  await dispatchWebhook(tenantId, "sync.pms.finished", {
-    properties: totalProperties,
-    bookings: totalBookings,
-  }).catch(() => {});
+    await dispatchWebhook(tenantId, "sync.pms.finished", {
+      properties: totalProperties,
+      bookings: totalBookings,
+    }).catch(() => {});
+  });
 
-  return ok({ properties: totalProperties, bookings: totalBookings, errors: syncErrors });
+  return ok({ started: true });
 }

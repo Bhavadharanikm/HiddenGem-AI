@@ -144,9 +144,7 @@ export async function GET(req: NextRequest) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];
-      await db
-        .rpc("upsert_pms_derived_metrics", { p_tenant_id: tenantId, p_date: dateStr })
-        .catch(() => {});
+      try { await db.rpc("upsert_pms_derived_metrics", { p_tenant_id: tenantId, p_date: dateStr }); } catch { /* non-fatal */ }
     }
   }
 

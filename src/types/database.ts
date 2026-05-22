@@ -443,6 +443,10 @@ export type Database = {
         Args: { p_tenant_id: string; p_start_date: string; p_end_date: string };
         Returns: number;
       };
+      upsert_pms_derived_metrics: {
+        Args: { p_tenant_id: string; p_date: string };
+        Returns: void;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
