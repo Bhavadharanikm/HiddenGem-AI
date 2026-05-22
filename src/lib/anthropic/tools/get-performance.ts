@@ -42,7 +42,7 @@ export async function executeGetPerformance(
 
   const start =
     input.date_range?.start ??
-    new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
+    new Date(Date.now() - 2 * 365 * 86400000).toISOString().split("T")[0];
   const end =
     input.date_range?.end ?? new Date().toISOString().split("T")[0];
 

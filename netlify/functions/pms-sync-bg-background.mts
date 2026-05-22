@@ -108,13 +108,15 @@ export default async function handler(req: Request) {
         }
       }
 
-      // ── Derived metrics (last 90 days, parallelised) ───────────────
+      // ── Derived metrics — one date per month for last 4 years ────────
+      // Using monthly granularity: the SQL fn uses date_trunc('month', p_date)
+      // so passing one date per month is sufficient and covers all synced history.
       const today = new Date();
-      const metricDates = Array.from({ length: 90 }, (_, i) => {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        return d.toISOString().split("T")[0];
-      });
+      const metricDates: string[] = [];
+      for (let m = 0; m <= 48; m++) {
+        const d = new Date(today.getFullYear(), today.getMonth() - m, 1);
+        metricDates.push(d.toISOString().split("T")[0]);
+      }
       await Promise.all(
         metricDates.map((date) =>
           db

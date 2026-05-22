@@ -62,7 +62,7 @@ export async function executeGetPmsData(
     }
 
     case "revenue_summary": {
-      const start = input.date_range?.start ?? new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+      const start = input.date_range?.start ?? new Date(Date.now() - 365 * 86400000).toISOString().split("T")[0];
       const end = input.date_range?.end ?? new Date().toISOString().split("T")[0];
 
       const { data, error } = await db
@@ -97,7 +97,7 @@ export async function executeGetPmsData(
         .eq("tenant_id", tenantId)
         .in("metric_type", ["occupancy_rate", "adr", "total_revenue"])
         .order("metric_date", { ascending: false })
-        .limit(90);
+        .limit(150);
 
       if (error) throw new Error(error.message);
       return { metrics: data ?? [] };

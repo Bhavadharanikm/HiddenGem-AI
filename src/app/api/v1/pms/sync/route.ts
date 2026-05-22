@@ -100,6 +100,18 @@ export async function POST(req: NextRequest) {
             }
             totalBookings += bookingRows.length;
           }
+          // Derived metrics — one date per month for last 4 years
+          const now = new Date();
+          const metricDates: string[] = [];
+          for (let m = 0; m <= 48; m++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+            metricDates.push(d.toISOString().split("T")[0]);
+          }
+          await Promise.all(
+            metricDates.map((date) =>
+              db.rpc("upsert_pms_derived_metrics", { p_tenant_id: tenantId, p_date: date }).then(() => {}, () => {})
+            )
+          );
           await db.from("pms_connections").update({ sync_status: "idle", last_sync_at: new Date().toISOString() }).eq("id", conn.id);
         } catch (err) {
           console.error(`[pms/sync] connection ${conn.id}:`, err);
