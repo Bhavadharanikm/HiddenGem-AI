@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/service";
 import { extractDriveFileId } from "@/lib/google-drive/client";
+import { syncDocument } from "@/lib/google-drive/sync";
 
 function isDashboard(req: NextRequest) {
   return req.headers.get("X-Dashboard-Session") === "1";
@@ -64,6 +65,12 @@ export async function POST(
       .single();
 
     if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
+
+    // Kick off sync without blocking the response
+    syncDocument(doc.id).catch((err) =>
+      console.error(`[knowledge] Sync failed for doc ${doc.id}:`, err)
+    );
+
     return NextResponse.json({ doc }, { status: 201 });
   } else {
     // No file ID extracted — save the URL as-is
@@ -80,6 +87,12 @@ export async function POST(
       .single();
 
     if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
+
+    // Kick off sync without blocking the response
+    syncDocument(doc.id).catch((err) =>
+      console.error(`[knowledge] Sync failed for doc ${doc.id}:`, err)
+    );
+
     return NextResponse.json({ doc }, { status: 201 });
   }
 }

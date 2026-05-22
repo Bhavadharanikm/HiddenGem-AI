@@ -1,50 +1,20 @@
 import ChatInterface from "@/components/chat/ChatInterface";
+import { getServiceClient } from "@/lib/supabase/service";
 
-// Mock data — replace with Supabase queries once auth is wired up
-const MOCK_CLIENTS = [
-  { id: "1", name: "Paradise Point", slug: "paradise-point" },
-  { id: "2", name: "Reflections Resorts", slug: "reflections-resorts" },
-  { id: "3", name: "The Cohost Company", slug: "the-cohost-company" },
-];
+export default async function Home() {
+  const db = getServiceClient();
 
-const MOCK_CONVERSATIONS = [
-  {
-    id: "c1",
-    title: "Q3 occupancy analysis",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "c2",
-    title: "Meta campaign performance review",
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "c3",
-    title: "Audience targeting strategy",
-    created_at: new Date(Date.now() - 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "c4",
-    title: "Review response templates",
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-  },
-  {
-    id: "c5",
-    title: "Seasonal pricing strategy",
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-    updated_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-];
+  const { data: tenants } = await db
+    .from("tenants")
+    .select("id, name, slug")
+    .eq("is_active", true)
+    .order("name");
 
-export default function Home() {
-  return (
-    <ChatInterface
-      initialClients={MOCK_CLIENTS}
-      initialConversations={MOCK_CONVERSATIONS}
-    />
-  );
+  const clients = (tenants ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+  }));
+
+  return <ChatInterface initialClients={clients} />;
 }

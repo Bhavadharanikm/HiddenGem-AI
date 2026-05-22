@@ -24,9 +24,18 @@ type ConversationRow = {
   external_id: string | null;
   title: string | null;
   source: "api" | "dashboard" | "widget";
+  summary: string | null;
   metadata: Json;
   created_at: string;
   updated_at: string;
+}
+
+type ClientMemoryRow = {
+  id: string;
+  tenant_id: string;
+  content: string;
+  category: "preference" | "insight" | "fact" | "goal" | "issue";
+  created_at: string;
 }
 
 type MessageRow = {
@@ -392,6 +401,12 @@ export type Database = {
         Row: Row<WebhookDeliveryRow>;
         Insert: Insert<WebhookDeliveryRow>;
         Update: Update<WebhookDeliveryRow>;
+        Relationships: [];
+      };
+      client_memories: {
+        Row: Row<ClientMemoryRow>;
+        Insert: Insert<ClientMemoryRow>;
+        Update: Update<ClientMemoryRow>;
         Relationships: [];
       };
     };

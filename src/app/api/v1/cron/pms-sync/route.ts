@@ -1,42 +1,37 @@
-import { NextRequest } from "next/server";
-import { validateApiKey } from "@/lib/api/auth";
-import { error, ok } from "@/lib/api/response";
+import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/service";
 import { createPMSAdapter } from "@/lib/pms/factory";
-import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import type { PMSProvider } from "@/lib/pms/adapter";
 import type { Json } from "@/types/database";
 
-export async function POST(req: NextRequest) {
-  const isDashboard = req.headers.get("X-Dashboard-Session") === "1";
-  let tenantId: string;
+export const maxDuration = 300; // 5 min — Netlify scheduled functions allow up to 15 min
 
-  if (isDashboard) {
-    let body: { tenant_id?: string };
-    try { body = await req.json(); } catch { body = {}; }
-    if (!body.tenant_id) return error("UNAUTHORIZED", "tenant_id required for dashboard session");
-    tenantId = body.tenant_id;
-  } else {
-    const auth = await validateApiKey(req);
-    if (!auth) return error("UNAUTHORIZED", "Invalid or missing API key");
-    tenantId = tenantId;
+export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  const authHeader = req.headers.get("authorization");
+
+  if (!secret || authHeader !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const db = getServiceClient();
 
-  const { data: connections } = await db
+  const { data: connections, error: fetchError } = await db
     .from("pms_connections")
-    .select("id, provider, credentials, last_sync_at")
-    .eq("tenant_id", tenantId)
+    .select("id, tenant_id, provider, credentials, last_sync_at")
     .eq("is_active", true);
 
+  if (fetchError) {
+    return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  }
+
   if (!connections?.length) {
-    return ok({ synced: 0, message: "No active PMS connections" });
+    return NextResponse.json({ synced: 0, message: "No active PMS connections" });
   }
 
   let totalProperties = 0;
   let totalBookings = 0;
-  const syncErrors: string[] = [];
+  const tenantsSynced = new Set<string>();
 
   for (const conn of connections) {
     try {
@@ -50,14 +45,14 @@ export async function POST(req: NextRequest) {
         conn.credentials as Record<string, string>
       );
 
-      // Fetch and upsert properties
+      // Properties + reviews
       const properties = await adapter.fetchProperties();
       for (const prop of properties) {
         const { data: upserted } = await db
           .from("pms_properties")
           .upsert(
             {
-              tenant_id: tenantId,
+              tenant_id: conn.tenant_id,
               connection_id: conn.id,
               external_id: prop.externalId,
               name: prop.name,
@@ -75,12 +70,11 @@ export async function POST(req: NextRequest) {
           .single();
         totalProperties++;
 
-        // Fetch reviews per property
         const reviews = await adapter.fetchReviews(prop.externalId).catch(() => []);
         for (const rev of reviews) {
           await db.from("pms_reviews").upsert(
             {
-              tenant_id: tenantId,
+              tenant_id: conn.tenant_id,
               property_id: (upserted as { id: string }).id,
               external_id: rev.externalId,
               rating: rev.rating,
@@ -95,7 +89,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Fetch delta bookings
+      // Delta bookings since last sync
       const bookings = await adapter.fetchBookings({
         since: conn.last_sync_at ?? undefined,
       });
@@ -104,7 +98,7 @@ export async function POST(req: NextRequest) {
         const { data: propRow } = await db
           .from("pms_properties")
           .select("id")
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", conn.tenant_id)
           .eq("external_id", booking.propertyExternalId)
           .maybeSingle();
 
@@ -112,7 +106,7 @@ export async function POST(req: NextRequest) {
 
         await db.from("pms_bookings").upsert(
           {
-            tenant_id: tenantId,
+            tenant_id: conn.tenant_id,
             property_id: (propRow as { id: string }).id,
             external_id: booking.externalId,
             status: booking.status,
@@ -132,10 +126,10 @@ export async function POST(req: NextRequest) {
         .from("pms_connections")
         .update({ sync_status: "idle", last_sync_at: new Date().toISOString() })
         .eq("id", conn.id);
+
+      tenantsSynced.add(conn.tenant_id);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[pms/sync] connection ${conn.id}:`, msg);
-      syncErrors.push(msg);
+      console.error(`[cron/pms-sync] connection ${conn.id}:`, err);
       await db
         .from("pms_connections")
         .update({ sync_status: "error" })
@@ -143,10 +137,26 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await dispatchWebhook(tenantId, "sync.pms.finished", {
+  // Recompute derived metrics (occupancy, ADR, revenue) for the last 90 days
+  const today = new Date();
+  for (const tenantId of tenantsSynced) {
+    for (let i = 0; i < 90; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      await db
+        .rpc("upsert_pms_derived_metrics", { p_tenant_id: tenantId, p_date: dateStr })
+        .catch(() => {});
+    }
+  }
+
+  console.log(
+    `[cron/pms-sync] done — tenants: ${tenantsSynced.size}, properties: ${totalProperties}, bookings: ${totalBookings}`
+  );
+
+  return NextResponse.json({
+    tenants: tenantsSynced.size,
     properties: totalProperties,
     bookings: totalBookings,
-  }).catch(() => {});
-
-  return ok({ properties: totalProperties, bookings: totalBookings, errors: syncErrors });
+  });
 }

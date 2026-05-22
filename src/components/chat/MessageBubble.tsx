@@ -1,10 +1,13 @@
-import { Gem } from "lucide-react";
+import { Gem, RotateCcw, Copy, Check, FileText } from "lucide-react";
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Message } from "./ChatInterface";
-import type { ReactNode } from "react";
 
 type Props = {
   message: Message;
   isStreaming?: boolean;
+  onRetry?: (content: string) => void;
 };
 
 function formatTime(dateStr: string) {
@@ -15,40 +18,81 @@ function formatTime(dateStr: string) {
   });
 }
 
-function renderMarkdown(content: string): ReactNode[] {
-  return content.split("\n\n").map((block, i) => {
-    const parts = block.split(/(\*\*[^*]+\*\*)/g);
-    const inline = parts.map((part, j) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return (
-          <strong key={j} className="text-[#f0f0ef] font-semibold">
-            {part.slice(2, -2)}
-          </strong>
-        );
-      }
-      return <span key={j}>{part}</span>;
-    });
-    return (
-      <p key={i} className={i > 0 ? "mt-3 leading-[1.75]" : "leading-[1.75]"}>
-        {inline}
-      </p>
-    );
-  });
-}
+const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
+  p: ({ children }) => <p className="mt-3 leading-[1.75] first:mt-0">{children}</p>,
+  h1: ({ children }) => <h1 className="mt-4 text-base font-semibold text-slate-900 first:mt-0">{children}</h1>,
+  h2: ({ children }) => <h2 className="mt-4 text-sm font-semibold text-slate-900 first:mt-0">{children}</h2>,
+  h3: ({ children }) => <h3 className="mt-4 text-sm font-semibold text-slate-900 first:mt-0">{children}</h3>,
+  ul: ({ children }) => <ul className="mt-2 list-disc space-y-1 pl-4">{children}</ul>,
+  ol: ({ children }) => <ol className="mt-2 list-decimal space-y-1 pl-4">{children}</ol>,
+  li: ({ children }) => <li className="leading-[1.75]">{children}</li>,
+  strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,
+  table: ({ children }) => (
+    <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--border)]">
+      <table className="w-full text-[13px]">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-[rgba(41,151,255,0.06)] text-slate-600">{children}</thead>,
+  tbody: ({ children }) => <tbody className="divide-y divide-[var(--border)]">{children}</tbody>,
+  tr: ({ children }) => <tr className="transition-colors hover:bg-[rgba(41,151,255,0.03)]">{children}</tr>,
+  th: ({ children }) => <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">{children}</th>,
+  td: ({ children }) => <td className="px-3 py-2 text-slate-700">{children}</td>,
+  pre: ({ children }) => (
+    <pre className="mt-3 overflow-x-auto rounded-xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-[12.5px] leading-relaxed text-slate-800 first:mt-0">
+      {children}
+    </pre>
+  ),
+  code: ({ children, className }) =>
+    className ? (
+      <code className="block whitespace-pre font-mono">{children}</code>
+    ) : (
+      <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[12px] text-slate-800">{children}</code>
+    ),
+};
 
-export default function MessageBubble({ message, isStreaming }: Props) {
+export default function MessageBubble({ message, isStreaming, onRetry }: Props) {
   const isUser = message.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  function copyToClipboard() {
+    navigator.clipboard.writeText(message.content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   if (isUser) {
     return (
       <div className="flex justify-end mb-6 animate-fade-in">
         <div className="max-w-[70%]">
-          <div className="bg-[#161616] border border-white/[0.07] rounded-2xl rounded-tr-sm px-4 py-3">
-            <p className="text-[14px] text-[#f0f0ef] leading-[1.75] whitespace-pre-wrap">
-              {message.content}
-            </p>
-          </div>
-          <p className="text-[12px] text-[#cccccc] mt-1.5 text-right pr-1">
+          {/* Attachment previews */}
+          {message.attachments && message.attachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap justify-end gap-2">
+              {message.attachments.map((att, i) =>
+                att.preview ? (
+                  <img
+                    key={i}
+                    src={att.preview}
+                    alt={att.name}
+                    className="h-24 w-24 rounded-xl object-cover border border-[rgba(41,151,255,0.2)] shadow-sm"
+                  />
+                ) : (
+                  <div key={i} className="flex items-center gap-1.5 rounded-xl border border-[rgba(41,151,255,0.2)] bg-white/70 px-2.5 py-1.5">
+                    <FileText size={12} className="text-slate-500 flex-shrink-0" />
+                    <span className="max-w-[120px] truncate text-[11px] text-slate-700">{att.name}</span>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+          {message.content && (
+            <div className="rounded-2xl rounded-tr-sm border border-[rgba(41,151,255,0.2)] bg-[linear-gradient(145deg,rgba(41,151,255,0.14)_0%,rgba(191,90,242,0.1)_100%)] px-4 py-3 shadow-[0_18px_36px_rgba(41,151,255,0.08)]">
+              <p className="whitespace-pre-wrap text-[14px] leading-[1.75] text-slate-900">
+                {message.content}
+              </p>
+            </div>
+          )}
+          <p className="mt-1.5 pr-1 text-right text-[12px] text-slate-500">
             {formatTime(message.created_at)}
           </p>
         </div>
@@ -58,42 +102,64 @@ export default function MessageBubble({ message, isStreaming }: Props) {
 
   return (
     <div aria-live={isStreaming ? "polite" : undefined} className="flex justify-start mb-6 animate-fade-in">
-      <div className="flex gap-3 max-w-[82%]">
+      <div className="flex gap-3 max-w-[82%] min-w-0">
         {/* Avatar */}
-        <div aria-hidden="true" className="w-7 h-7 rounded-lg bg-[#FAC515]/10 border border-[#FAC515]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <Gem size={12} className="text-[#FAC515]" strokeWidth={1.5} />
+        <div aria-hidden="true" className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-[rgba(193,209,236,1)] bg-[rgba(255,255,255,0.84)]">
+          <Gem size={12} className="text-[var(--brand)]" strokeWidth={1.5} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="bg-[#0f0f0f] border border-white/[0.05] border-l-[2px] border-l-[#FAC515]/20 rounded-2xl rounded-tl-sm px-4 py-3">
-            <div className="text-[14px] text-[#d8d8d8] leading-[1.75]">
+          <div className="rounded-2xl rounded-tl-sm border border-[var(--border)] bg-[rgba(255,255,255,0.78)] px-4 py-3 shadow-[0_14px_28px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+            <div className="text-[14px] leading-[1.75] text-slate-700">
               {isStreaming && message.content === "" ? (
                 <span className="inline-flex items-center gap-1.5">
                   <span
-                    className="w-1.5 h-1.5 rounded-full bg-[#FAC515] animate-pulse-dot"
+                    className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-[var(--brand)]"
                     style={{ animationDelay: "0ms" }}
                   />
                   <span
-                    className="w-1.5 h-1.5 rounded-full bg-[#FAC515] animate-pulse-dot"
+                    className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-[var(--brand)]"
                     style={{ animationDelay: "200ms" }}
                   />
                   <span
-                    className="w-1.5 h-1.5 rounded-full bg-[#FAC515] animate-pulse-dot"
+                    className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-[var(--brand)]"
                     style={{ animationDelay: "400ms" }}
                   />
                 </span>
               ) : (
                 <>
-                  {renderMarkdown(message.content)}
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                    {message.content}
+                  </ReactMarkdown>
                   {isStreaming && (
-                    <span className="inline-block w-[2px] h-[14px] bg-[#FAC515]/50 ml-0.5 animate-cursor align-middle rounded-full" />
+                    <span className="ml-0.5 inline-block h-[14px] w-[2px] animate-cursor rounded-full bg-[rgba(41,151,255,0.45)] align-middle" />
                   )}
                 </>
               )}
             </div>
           </div>
-          <p className="text-[12px] text-[#cccccc] mt-1.5 pl-1">
-            {isStreaming ? "Responding…" : formatTime(message.created_at)}
-          </p>
+          <div className="mt-1.5 pl-1 flex items-center gap-3">
+            <p className="text-[12px] text-slate-500">
+              {isStreaming ? "Responding…" : formatTime(message.created_at)}
+            </p>
+            {!isStreaming && (
+              <button
+                onClick={copyToClipboard}
+                aria-label="Copy message"
+                className="flex items-center gap-1 text-[11.5px] text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                {copied ? <Check size={11} strokeWidth={2.5} className="text-[#30d158]" /> : <Copy size={11} strokeWidth={2} />}
+                <span className={copied ? "text-[#30d158]" : ""}>{copied ? "Copied" : "Copy"}</span>
+              </button>
+            )}
+            {message.isError && message.retryContent && onRetry && (
+              <button
+                onClick={() => onRetry(message.retryContent!)}
+                className="flex items-center gap-1 text-[11.5px] text-[var(--brand)] hover:text-[#1579d6] font-medium transition-colors"
+              >
+                <RotateCcw size={10} strokeWidth={2.5} /> Retry
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

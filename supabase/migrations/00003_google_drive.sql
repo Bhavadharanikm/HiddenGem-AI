@@ -1,5 +1,7 @@
+SET search_path TO public, extensions;
+
 CREATE TABLE google_drive_connections (
-  id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id        UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   access_token     TEXT NOT NULL,
   refresh_token    TEXT NOT NULL,
@@ -10,7 +12,7 @@ CREATE TABLE google_drive_connections (
 );
 
 CREATE TABLE knowledge_documents (
-  id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id        UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   name             TEXT NOT NULL,
   google_drive_id  TEXT NOT NULL,
@@ -27,13 +29,13 @@ CREATE TABLE knowledge_documents (
 );
 
 CREATE TABLE knowledge_chunks (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   document_id   UUID NOT NULL REFERENCES knowledge_documents(id) ON DELETE CASCADE,
   chunk_index   INTEGER NOT NULL,
   content       TEXT NOT NULL,
   token_count   INTEGER,
-  embedding     VECTOR(1536),
+  embedding     vector(1536),
   metadata      JSONB DEFAULT '{}'::jsonb,
   created_at    TIMESTAMPTZ DEFAULT now()
 );
@@ -52,7 +54,7 @@ CREATE TRIGGER knowledge_documents_updated_at
 
 CREATE OR REPLACE FUNCTION match_knowledge_chunks(
   p_tenant_id    UUID,
-  p_embedding    VECTOR(1536),
+  p_embedding    vector(1536),
   p_match_count  INT DEFAULT 8,
   p_threshold    FLOAT DEFAULT 0.70
 )

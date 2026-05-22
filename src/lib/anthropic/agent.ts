@@ -75,13 +75,38 @@ async function* streamWithOpenAI(
     throw err;
   }
 }
+function buildUserContent(text: string, attachments: AgentAttachment[] = []): MessageParam["content"] {
+  if (!attachments.length) return text;
+  const blocks: Anthropic.MessageParam["content"] = attachments.map((att) => {
+    if (att.mediaType === "application/pdf") {
+      return {
+        type: "document",
+        source: { type: "base64", media_type: "application/pdf", data: att.data },
+      } as unknown as Anthropic.ContentBlockParam;
+    }
+    return {
+      type: "image",
+      source: { type: "base64", media_type: att.mediaType as "image/png" | "image/jpeg" | "image/gif" | "image/webp", data: att.data },
+    } as Anthropic.ImageBlockParam;
+  });
+  if (text) blocks.push({ type: "text", text });
+  return blocks as MessageParam["content"];
+}
+
 const MAX_TOOL_ITERATIONS = 10;
 const MODEL = "claude-sonnet-4-6";
+
+export type AgentAttachment = {
+  name: string;
+  mediaType: string;
+  data: string; // base64
+};
 
 export type AgentRunOptions = {
   tenantId: string;
   conversationId: string | null;
   userMessage: string;
+  attachments?: AgentAttachment[];
   source?: "api" | "dashboard" | "widget";
 };
 
@@ -95,7 +120,7 @@ export type AgentRunResult = {
 
 export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   const db = getServiceClient();
-  const { tenantId, userMessage, source = "api" } = opts;
+  const { tenantId, userMessage, attachments = [], source = "api" } = opts;
 
   // Ensure conversation exists
   let conversationId = opts.conversationId;
@@ -122,10 +147,10 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     content: m.content as MessageParam["content"],
   }));
 
-  // Append the new user message
-  messages.push({ role: "user", content: userMessage });
+  // Append the new user message (with any attachments as content blocks)
+  messages.push({ role: "user", content: buildUserContent(userMessage, attachments) });
 
-  // Persist user message
+  // Persist user message (text only — no base64 in DB)
   await db.from("messages").insert({
     tenant_id: tenantId,
     conversation_id: conversationId,
@@ -249,7 +274,7 @@ export async function* runAgentStream(
 > {
   const dbEnabled = isSupabaseConfigured();
   const db = dbEnabled ? getServiceClient() : null;
-  const { tenantId, userMessage, source = "api" } = opts;
+  const { tenantId, userMessage, attachments = [], source = "api" } = opts;
 
   let conversationId = opts.conversationId;
 
@@ -289,7 +314,7 @@ export async function* runAgentStream(
       }))
     );
   }
-  messages.push({ role: "user", content: userMessage });
+  messages.push({ role: "user", content: buildUserContent(userMessage, attachments) });
 
   const systemPrompt = dbEnabled
     ? await assembleSystemPrompt(tenantId)
@@ -378,7 +403,52 @@ export async function* runAgentStream(
     });
 
     await db.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
+
+    // Generate a brief summary of this conversation for future context (fire-and-forget)
+    generateConversationSummary(db, conversationId, messages, fullContent).catch(() => {});
   }
 
   yield { type: "done", conversationId, inputTokens: totalInputTokens, outputTokens: totalOutputTokens };
+}
+
+async function generateConversationSummary(
+  db: ReturnType<typeof import("@/lib/supabase/service").getServiceClient>,
+  conversationId: string,
+  messages: MessageParam[],
+  lastAssistantMessage: string
+) {
+  // Build a compact transcript of the conversation (text only, no tool results)
+  const transcript = messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => {
+      const text =
+        typeof m.content === "string"
+          ? m.content
+          : (m.content as Array<{ type: string; text?: string }>)
+              .filter((b) => b.type === "text" && b.text)
+              .map((b) => (b as { text: string }).text)
+              .join(" ");
+      return `${m.role === "user" ? "User" : "Assistant"}: ${text.slice(0, 400)}`;
+    })
+    .join("\n");
+
+  if (!transcript.trim()) return;
+
+  const response = await getAnthropic().messages.create({
+    model: MODEL,
+    max_tokens: 256,
+    system: "You summarize conversations in 1-3 sentences, capturing the main topics discussed and any decisions or data points that would be useful context in a future conversation. Be specific and concise.",
+    messages: [
+      {
+        role: "user",
+        content: `Summarize this conversation:\n\n${transcript}\n\nAssistant final reply: ${lastAssistantMessage.slice(0, 600)}`,
+      },
+    ],
+  });
+
+  const summaryBlock = response.content.find((b) => b.type === "text");
+  const summary = summaryBlock?.type === "text" ? summaryBlock.text : null;
+  if (!summary) return;
+
+  await db.from("conversations").update({ summary }).eq("id", conversationId);
 }

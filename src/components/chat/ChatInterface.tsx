@@ -7,8 +7,10 @@ import ConversationSidebar from "./ConversationSidebar";
 import ConversationHistory from "./ConversationHistory";
 import MessageBubble from "./MessageBubble";
 import ToolActivityIndicator from "./ToolActivityIndicator";
-import ChatInput from "./ChatInput";
+import ChatInput, { type AttachedFile } from "./ChatInput";
 import SettingsModal from "@/components/settings/SettingsModal";
+import PerformanceDashboardView from "@/components/performance/PerformanceDashboardView";
+import EmailPerformanceDashboardView from "@/components/email/EmailPerformanceDashboardView";
 
 export type Client = {
   id: string;
@@ -23,29 +25,36 @@ export type Conversation = {
   updated_at: string;
 };
 
+export type MessageAttachment = {
+  name: string;
+  mediaType: string;
+  preview?: string; // object URL — display only, not persisted
+};
+
 export type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
   created_at: string;
+  isError?: boolean;
+  retryContent?: string;
+  attachments?: MessageAttachment[];
 };
+
+type WorkspaceView = "chat" | "performance" | "email";
 
 type Props = {
   initialClients: Client[];
-  initialConversations: Conversation[];
 };
 
-export default function ChatInterface({
-  initialClients,
-  initialConversations,
-}: Props) {
+export default function ChatInterface({ initialClients }: Props) {
   const [selectedClient, setSelectedClient] = useState<Client | null>(
     initialClients[0] ?? null
   );
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null);
-  const [conversations] = useState<Conversation[]>(initialConversations);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingMessage, setStreamingMessage] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
@@ -53,6 +62,7 @@ export default function ChatInterface({
   const [leftNavOpen, setLeftNavOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeView, setActiveView] = useState<WorkspaceView>("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,12 +89,58 @@ export default function ChatInterface({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingMessage]);
 
+  // Fetch conversations whenever the selected client changes
+  useEffect(() => {
+    if (!selectedClient) { setConversations([]); return; }
+    fetch(`/api/v1/clients/${selectedClient.id}/conversations`, {
+      headers: { "X-Dashboard-Session": "1" },
+    })
+      .then((r) => r.json())
+      .then((j) => setConversations(j.conversations ?? []))
+      .catch(() => setConversations([]));
+  }, [selectedClient]);
+
   const handleNewConversation = useCallback(() => {
     setSelectedConversationId(null);
     setMessages([]);
     setStreamingMessage(null);
     setActiveTool(null);
   }, []);
+
+  const fetchMessages = useCallback(
+    async (conversationId: string) => {
+      if (!selectedClient) return;
+      setIsLoading(true);
+      try {
+        const res = await fetch(
+          `/api/v1/conversations/${conversationId}/messages?tenant_id=${selectedClient.id}`,
+          { headers: { "X-Dashboard-Session": "1" } }
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        setMessages(
+          (json.data ?? []).map((m: { id: string; role: "user" | "assistant"; content: string; created_at: string }) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            created_at: m.created_at,
+          }))
+        );
+      } catch {
+        // silently ignore — user can still type
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [selectedClient]
+  );
+
+  useEffect(() => {
+    if (!selectedConversationId) return;
+    setMessages([]);
+    setStreamingMessage(null);
+    fetchMessages(selectedConversationId);
+  }, [selectedConversationId, fetchMessages]);
 
   const handleClientChange = useCallback(
     (client: Client) => {
@@ -95,14 +151,28 @@ export default function ChatInterface({
   );
 
   const handleSend = useCallback(
-    async (content: string) => {
-      if (!selectedClient || !content.trim() || isLoading) return;
+    async (content: string, attachedFiles: AttachedFile[] = []) => {
+      if (!selectedClient || (!content.trim() && attachedFiles.length === 0) || isLoading) return;
+
+      // Convert files to base64 for the API
+      const apiAttachments = await Promise.all(
+        attachedFiles.map(async ({ file, preview }) => {
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(",")[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          return { name: file.name, mediaType: file.type, data: base64, preview };
+        })
+      );
 
       const userMsg: Message = {
         id: `user-${Date.now()}`,
         role: "user",
         content,
         created_at: new Date().toISOString(),
+        attachments: apiAttachments.map(({ name, mediaType, preview }) => ({ name, mediaType, preview })),
       };
       setMessages((prev) => [...prev, userMsg]);
       setIsLoading(true);
@@ -128,6 +198,7 @@ export default function ChatInterface({
             conversation_id: selectedConversationId,
             tenant_id: selectedClient.id,
             stream: true,
+            attachments: apiAttachments.map(({ name, mediaType, data }) => ({ name, mediaType, data })),
           }),
         });
 
@@ -199,6 +270,8 @@ export default function ChatInterface({
             role: "assistant",
             content: `⚠️ ${msg}`,
             created_at: new Date().toISOString(),
+            isError: true,
+            retryContent: content,
           },
         ]);
       } finally {
@@ -210,22 +283,49 @@ export default function ChatInterface({
     [selectedClient, isLoading, selectedConversationId]
   );
 
+  const handleRetry = useCallback(
+    (retryContent: string) => {
+      setMessages((prev) => {
+        // Remove the trailing error message and the user message before it
+        const withoutError = prev.length > 0 && prev[prev.length - 1].isError
+          ? prev.slice(0, -1)
+          : prev;
+        const m = withoutError.length;
+        return m > 0 && withoutError[m - 1].role === "user"
+          ? withoutError.slice(0, -1)
+          : withoutError;
+      });
+      handleSend(retryContent);
+    },
+    [handleSend]
+  );
+
   const currentTitle = selectedConversationId
     ? (conversations.find((c) => c.id === selectedConversationId)?.title ??
       "Conversation")
     : "New conversation";
 
+  const headerTitle = activeView === "performance" ? "Performance" : activeView === "email" ? "Email Performance" : currentTitle;
+  const showHistory = activeView === "chat";
+
   return (
     <div
-      className="flex h-screen overflow-hidden bg-[#080808]"
-      style={{ fontFamily: "var(--font-body)" }}
+      className="relative flex h-screen overflow-hidden bg-[#eef4fd] text-slate-900"
     >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+      >
+        <div className="absolute -right-24 top-[-12rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(41,151,255,0.12)] blur-3xl" />
+        <div className="absolute left-1/2 top-1/3 h-[22rem] w-[22rem] -translate-x-1/2 rounded-full bg-[rgba(255,159,10,0.08)] blur-3xl" />
+      </div>
+
       {/* Mobile overlay backdrop — left */}
       {leftNavOpen && (
         <button
           type="button"
           aria-label="Close navigation"
-          className="fixed inset-0 z-20 bg-black/60 w-full cursor-default border-0 md:hidden"
+          className="fixed inset-0 z-20 w-full cursor-default border-0 bg-slate-900/24 backdrop-blur-[2px] md:hidden"
           onClick={() => setLeftNavOpen(false)}
         />
       )}
@@ -244,39 +344,43 @@ export default function ChatInterface({
           selectedClient={selectedClient}
           onClientChange={handleClientChange}
           onSettingsOpen={() => setSettingsOpen(true)}
+          activeView={activeView}
+          onNavigate={setActiveView}
+          onFilterApply={(_month, _year) => { /* filter wired — dashboards will consume when live data is added */ }}
         />
       </div>
 
       {/* Column 2: Chat Center */}
-      <div className="flex flex-col flex-1 min-w-0 bg-[#080808]">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col bg-white/60">
         {/* Header */}
-        <header className="h-11 flex items-center px-4 border-b border-white/[0.05] flex-shrink-0 gap-2">
+        <header className="flex h-14 flex-shrink-0 items-center gap-2 border-b border-[var(--border)] bg-[rgba(255,255,255,0.68)] px-4 backdrop-blur-xl">
           {/* Toggle left nav */}
           <button
             onClick={() => setLeftNavOpen((v) => !v)}
-            className="p-2.5 rounded-md hover:bg-white/[0.04] text-[#cccccc] hover:text-[#ccc] transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#080808]"
+            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
             aria-label="Toggle navigation"
           >
-            <PanelLeft size={15} />
+          <PanelLeft size={15} />
           </button>
 
           {/* Breadcrumb */}
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1 flex-1 min-w-0 text-[12px]">
+          <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1 text-[12px]">
             {selectedClient && (
               <>
-                <span className="text-[#cccccc] truncate">
+                <span className="truncate text-slate-500">
                   {selectedClient.name}
                 </span>
-                <span className="text-[#cccccc] select-none flex-shrink-0">/</span>
+                <span className="select-none text-slate-400">/</span>
               </>
             )}
-            <span className="text-[#ccc] truncate">{currentTitle}</span>
+            <span className="truncate font-medium text-slate-900">{headerTitle}</span>
           </nav>
 
           {/* Toggle right history panel */}
           <button
             onClick={() => setHistoryOpen((v) => !v)}
-            className="p-2.5 rounded-md hover:bg-white/[0.04] text-[#cccccc] hover:text-[#ccc] transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#080808]"
+            disabled={!showHistory}
+            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
             aria-label="Toggle conversation history"
           >
             <PanelRight size={15} />
@@ -284,13 +388,21 @@ export default function ChatInterface({
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto bg-[#080808]">
-          {messages.length === 0 && streamingMessage === null ? (
+        <div className="flex-1 overflow-y-auto bg-transparent">
+          {activeView === "performance" ? (
+            <PerformanceDashboardView clientName={selectedClient?.name ?? "Client"} />
+          ) : activeView === "email" ? (
+            <EmailPerformanceDashboardView clientName={selectedClient?.name ?? ""} />
+          ) : messages.length === 0 && streamingMessage === null && !isLoading ? (
             <EmptyState clientName={selectedClient?.name} onSuggestion={handleSend} />
           ) : (
-            <div className="max-w-2xl mx-auto px-6 py-8 space-y-1">
+            <div className="mx-auto max-w-3xl space-y-1 px-6 py-8">
               {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  onRetry={msg.isError ? handleRetry : undefined}
+                />
               ))}
               {streamingMessage !== null && (
                 <MessageBubble
@@ -314,36 +426,38 @@ export default function ChatInterface({
         </div>
 
         {/* Input */}
-        <div className="border-t border-white/[0.04] pt-4 px-4 pb-6 max-w-2xl mx-auto w-full">
-          <ChatInput
-            onSend={handleSend}
-            disabled={isLoading || !selectedClient}
-            placeholder={
-              selectedClient
-                ? `Ask about ${selectedClient.name}…`
-                : "Select a client to begin"
-            }
-          />
-        </div>
+        {activeView === "chat" ? (
+          <div className="mx-auto w-full max-w-3xl border-t border-[var(--border)] px-4 pb-6 pt-4">
+            <ChatInput
+              onSend={handleSend}
+              disabled={isLoading || !selectedClient}
+              placeholder={
+                selectedClient
+                  ? `Ask about ${selectedClient.name}…`
+                  : "Select a client to begin"
+              }
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* Mobile overlay backdrop — right */}
-      {historyOpen && (
+      {showHistory && historyOpen && (
         <button
           type="button"
           aria-label="Close history"
-          className="fixed inset-0 z-20 bg-black/60 w-full cursor-default border-0 lg:hidden"
+          className="fixed inset-0 z-20 w-full cursor-default border-0 bg-slate-900/24 backdrop-blur-[2px] lg:hidden"
           onClick={() => setHistoryOpen(false)}
         />
       )}
 
       {/* Column 3: Right History Panel */}
       <div
-        aria-hidden={!historyOpen}
+        aria-hidden={!historyOpen || !showHistory}
         className={cn(
           "flex-shrink-0 transition-[width] duration-200 ease-in-out overflow-hidden",
           "lg:relative fixed inset-y-0 right-0 z-30",
-          historyOpen ? "w-[260px]" : "w-0"
+          showHistory && historyOpen ? "w-[260px]" : "w-0"
         )}
       >
         <ConversationHistory
@@ -361,41 +475,40 @@ export default function ChatInterface({
 
 function EmptyState({ clientName, onSuggestion }: { clientName?: string; onSuggestion?: (text: string) => void }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center px-8 select-none">
-      {/* Gem icon with glow */}
-      <div className="relative mb-5">
-        <div aria-hidden="true" className="absolute -inset-6 bg-[#FAC515]/[0.04] rounded-full blur-2xl" />
-        <div className="relative w-16 h-16 rounded-2xl bg-[#FAC515]/[0.07] border border-[#FAC515]/15 flex items-center justify-center">
-          <Gem size={26} className="text-[#FAC515]" strokeWidth={1.25} />
+    <div className="flex h-full min-h-[60vh] select-none flex-col items-center justify-center px-8 text-center">
+      <div className="relative mb-6">
+        <div aria-hidden="true" className="absolute -inset-8 rounded-full bg-[rgba(41,151,255,0.16)] blur-3xl" />
+        <div className="relative flex h-18 w-18 items-center justify-center rounded-[1.75rem] border border-[rgba(193,209,236,1)] bg-[rgba(255,255,255,0.74)] shadow-[0_22px_50px_rgba(41,151,255,0.14)]">
+          <Gem size={28} className="text-[var(--brand)]" strokeWidth={1.3} />
         </div>
       </div>
 
-      {/* Thin gold line */}
-      <div aria-hidden="true" className="w-10 h-px bg-[#FAC515]/20 mb-5" />
+      <div aria-hidden="true" className="mb-5 h-px w-16 bg-gradient-to-r from-transparent via-[rgba(41,151,255,0.5)] to-transparent" />
 
-      {/* Title */}
       <h2
-        className="text-[19px] text-[#f0f0ef] font-medium mb-3"
-        style={{ fontFamily: "var(--font-display)", fontStyle: "italic" }}
+        className="mb-3 text-[22px] font-semibold tracking-[-0.03em] text-slate-900"
       >
         {clientName ? `${clientName} AI` : "What can I help you with?"}
       </h2>
 
-      {/* Subtitle */}
-      <p className="text-[13px] text-[#cccccc] max-w-[260px] leading-relaxed mb-8">
+      <p className="mb-8 max-w-[360px] text-[13px] leading-relaxed text-slate-500">
         Ask about bookings, campaign performance, audience data, or anything in
         the knowledge base.
       </p>
 
-      {/* Suggestion chips */}
-      <div className="flex flex-wrap items-center gap-2.5 justify-center">
+      <div className="flex flex-wrap items-center justify-center gap-2.5">
         {["Occupancy rates", "Ad performance", "Campaign history"].map(
           (hint) => (
             <button
               type="button"
               key={hint}
-              onClick={() => onSuggestion?.(hint)}
-              className="text-[11.5px] text-[#d0d0d0] border border-[#FAC515]/20 bg-[#FAC515]/[0.04] rounded-full px-3.5 py-1.5 hover:border-[#FAC515]/50 hover:text-[#f0f0ef] transition-colors cursor-pointer"
+              onClick={() => {
+                const q = clientName
+                  ? `Tell me about ${clientName}'s ${hint.toLowerCase()}`
+                  : hint;
+                onSuggestion?.(q);
+              }}
+              className="cursor-pointer rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.76)] px-3.5 py-1.5 text-[11.5px] text-slate-600 transition-colors hover:border-[rgba(41,151,255,0.35)] hover:bg-[rgba(255,255,255,0.92)] hover:text-[var(--brand)]"
             >
               {hint}
             </button>

@@ -8,7 +8,8 @@ import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 export const runtime = "edge";
 
 export async function POST(req: NextRequest) {
-  let body: { message: string; conversation_id?: string; stream?: boolean; tenant_id?: string };
+  type ApiAttachment = { name: string; mediaType: string; data: string };
+  let body: { message: string; conversation_id?: string; stream?: boolean; tenant_id?: string; attachments?: ApiAttachment[] };
   try {
     body = await req.json();
   } catch {
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
     tenantId: auth.tenantId,
     conversationId: body.conversation_id ?? null,
     userMessage: body.message,
+    attachments: body.attachments ?? [],
     source: "api" as const,
   };
 

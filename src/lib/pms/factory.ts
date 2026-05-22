@@ -9,13 +9,13 @@ export function createPMSAdapter(
   switch (provider) {
     case "guesty":
       return new GuestyAdapter({
-        clientId: credentials.clientId,
-        clientSecret: credentials.clientSecret,
+        clientId: credentials.client_id,
+        clientSecret: credentials.client_secret,
       });
     case "hostaway":
       return new HostawayAdapter({
-        accountId: credentials.accountId,
-        apiKey: credentials.apiKey,
+        accountId: credentials.account_id,
+        apiKey: credentials.client_secret,
       });
     default:
       throw new Error(`PMS provider not supported: ${provider}`);

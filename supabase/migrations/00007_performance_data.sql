@@ -1,5 +1,5 @@
 CREATE TABLE performance_metrics (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   metric_date   DATE NOT NULL,
   metric_type   TEXT NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE performance_metrics (
 );
 
 CREATE TABLE campaign_history (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   campaign_name   TEXT NOT NULL,
   campaign_type   TEXT,

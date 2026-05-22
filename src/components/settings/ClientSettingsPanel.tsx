@@ -1,846 +1,352 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Check,
-  Loader2,
-  ToggleLeft,
-  ToggleRight,
-  FileText,
-  Trash2,
-  X,
-  Plus,
-} from "lucide-react";
+import { Check, Loader2, ToggleLeft, ToggleRight, FileText, Trash2, X, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ClientRecord = {
-  id: string;
-  name: string;
-  slug: string;
-  system_prompt: string | null;
-  is_active: boolean;
-  created_at: string;
+  id: string; name: string; slug: string;
+  system_prompt: string | null; is_active: boolean; created_at: string;
 };
 
-type Props = {
-  client: ClientRecord;
-  clientIndex: number;
-  onUpdate: (updated: ClientRecord) => void;
-};
+type Props = { client: ClientRecord; clientIndex: number; onUpdate: (updated: ClientRecord) => void };
 
 const SWATCH_COLORS = [
-  "bg-[#FAC515]/15 text-[#FAC515] border-[#FAC515]/25",
-  "bg-amber-600/15 text-amber-500 border-amber-600/25",
-  "bg-yellow-700/15 text-yellow-500 border-yellow-700/25",
-  "bg-orange-700/15 text-orange-500 border-orange-700/25",
+  "bg-[rgba(41,151,255,0.12)] text-[#2997ff] border-[rgba(41,151,255,0.2)]",
+  "bg-[rgba(255,159,10,0.12)] text-[#ff9f0a] border-[rgba(255,159,10,0.2)]",
+  "bg-[rgba(48,209,88,0.12)] text-[#30d158] border-[rgba(48,209,88,0.2)]",
+  "bg-[rgba(191,90,242,0.12)] text-[#bf5af2] border-[rgba(191,90,242,0.2)]",
 ];
 
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function toSlug(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
-}
+function getInitials(n: string) { return n.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(); }
+function toSlug(n: string) { return n.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim(); }
+function formatDate(d: string | null) { return d ? new Date(d).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : null; }
 
 type Tab = "general" | "knowledge" | "pms" | "meta" | "performance" | "audiences";
-
 const TABS: { id: Tab; label: string }[] = [
-  { id: "general", label: "General" },
-  { id: "knowledge", label: "Knowledge Base" },
-  { id: "pms", label: "PMS Data" },
-  { id: "meta", label: "Meta Ads" },
-  { id: "performance", label: "Performance" },
-  { id: "audiences", label: "Audiences" },
+  { id: "general", label: "General" }, { id: "knowledge", label: "Knowledge Base" },
+  { id: "pms", label: "PMS Data" }, { id: "meta", label: "Meta Ads" },
+  { id: "performance", label: "Performance" }, { id: "audiences", label: "Audiences" },
 ];
 
-// ─────────────────────────────────────────────────────────────
-// Types for sub-sections
-// ─────────────────────────────────────────────────────────────
+const field = "w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all";
+const lbl   = "text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 block mb-1.5";
+const btn   = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)]";
 
-type KnowledgeDoc = {
-  id: string;
-  name: string;
-  google_doc_url: string;
-  mime_type: string | null;
-  status: "pending" | "processing" | "ready" | "error";
-  last_modified_at: string | null;
-  created_at: string;
-};
-
-type PmsConnection = {
-  id: string;
-  provider: string;
-  last_sync_at: string | null;
-  sync_status: string;
-  is_active: boolean;
-};
-
-type MetaConnection = {
-  id: string;
-  ad_account_id: string;
-  token_expires_at: string | null;
-  last_sync_at: string | null;
-  is_active: boolean;
-};
-
-// ─────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString("en-AU", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+type KDoc = { id: string; name: string; google_doc_url: string; mime_type: string | null; status: "pending"|"processing"|"ready"|"error"; last_modified_at: string | null; created_at: string };
+type PmsCon = { id: string; provider: string; last_sync_at: string | null; sync_status: string; is_active: boolean };
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "ready") {
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20">
-        ready
-      </span>
-    );
-  }
-  if (status === "error") {
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/20">
-        error
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[#FAC515]/10 text-[#FAC515] border border-[#FAC515]/20">
-      <Loader2 size={10} className="animate-spin" />
-      {status}
-    </span>
-  );
+  if (status === "ready")  return <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">ready</span>;
+  if (status === "error")  return <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">error</span>;
+  return <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border border-[rgba(41,151,255,0.2)]"><Loader2 size={10} className="animate-spin" />{status}</span>;
 }
-
-// ─────────────────────────────────────────────────────────────
-// Tab: General
-// ─────────────────────────────────────────────────────────────
 
 function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: ClientRecord) => void }) {
   const [name, setName] = useState(client.name);
   const [slug, setSlug] = useState(client.slug);
-  const [systemPrompt, setSystemPrompt] = useState(client.system_prompt ?? "");
-  const [isActive, setIsActive] = useState(client.is_active);
+  const [sp, setSp]     = useState(client.system_prompt ?? "");
+  const [active, setActive] = useState(client.is_active);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [err, setErr]       = useState<string | null>(null);
+  const [ok, setOk]         = useState(false);
 
-  useEffect(() => {
-    setName(client.name);
-    setSlug(client.slug);
-    setSystemPrompt(client.system_prompt ?? "");
-    setIsActive(client.is_active);
-  }, [client]);
+  useEffect(() => { setName(client.name); setSlug(client.slug); setSp(client.system_prompt ?? ""); setActive(client.is_active); }, [client]);
 
-  async function handleSave() {
-    if (!name.trim() || !slug.trim()) {
-      setError("Name and slug are required");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    setSuccess(false);
+  const isDirty = name !== client.name || slug !== client.slug || sp !== (client.system_prompt ?? "") || active !== client.is_active;
+
+  async function save() {
+    if (!name.trim() || !slug.trim()) { setErr("Name and slug are required"); return; }
+    setSaving(true); setErr(null); setOk(false);
     try {
-      const res = await fetch(`/api/v1/clients/${client.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" },
-        body: JSON.stringify({ name, slug, system_prompt: systemPrompt || null, is_active: isActive }),
-      });
+      const res = await fetch(`/api/v1/clients/${client.id}`, { method: "PUT", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ name, slug, system_prompt: sp || null, is_active: active }) });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      onUpdate(json.client);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
+      onUpdate(json.client); setOk(true); setTimeout(() => setOk(false), 2000);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed to save"); }
+    finally { setSaving(false); }
   }
 
   return (
-    <div className="space-y-5">
-      <div>
-        <label className="text-[11px] text-[#cccccc] uppercase tracking-wider block mb-1.5">Client name</label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Paradise Point"
-          className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#cccccc] outline-none focus:border-[#FAC515]/40 transition-colors"
-        />
-      </div>
-
-      <div>
-        <label className="text-[11px] text-[#cccccc] uppercase tracking-wider block mb-1.5">Slug</label>
-        <input
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          placeholder="e.g. paradise-point"
-          className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#cccccc] font-mono outline-none focus:border-[#FAC515]/40 transition-colors"
-        />
-        <p className="text-[11px] text-[#cccccc] mt-1">Lowercase, hyphens only</p>
-      </div>
-
-      <div>
-        <label className="text-[11px] text-[#cccccc] uppercase tracking-wider block mb-1.5">AI system prompt</label>
-        <textarea
-          value={systemPrompt}
-          onChange={(e) => setSystemPrompt(e.target.value)}
-          placeholder="You are the AI assistant for [Client Name]..."
-          rows={4}
-          className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#cccccc] outline-none focus:border-[#FAC515]/40 transition-colors resize-none leading-relaxed"
-        />
-      </div>
-
+    <div className="space-y-4">
+      <div><label className={lbl}>Client name</label><input value={name} onChange={(e) => { setName(e.target.value); setSlug(toSlug(e.target.value)); }} className={field} /></div>
+      <div><label className={lbl}>Slug</label><input value={slug} onChange={(e) => setSlug(e.target.value)} className={cn(field, "font-mono")} /><p className="text-[11px] text-slate-400 mt-1">Lowercase, hyphens only</p></div>
+      <div><label className={lbl}>AI system prompt</label><textarea value={sp} onChange={(e) => setSp(e.target.value)} rows={4} placeholder="You are the AI assistant for [Client Name]..." className={cn(field, "resize-none leading-relaxed")} /></div>
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setIsActive((v) => !v)}
-          aria-label={isActive ? "Deactivate client" : "Activate client"}
-          className="p-0 border-0 bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 rounded"
-        >
-          {isActive
-            ? <ToggleRight size={22} className="text-[#FAC515]" />
-            : <ToggleLeft size={22} className="text-[#cccccc]" />}
+        <button type="button" onClick={() => setActive((v) => !v)} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] rounded">
+          {active ? <ToggleRight size={22} className="text-[var(--brand)]" /> : <ToggleLeft size={22} className="text-slate-300" />}
         </button>
-        <span className="text-[13px] text-[#d8d8d8]">Active</span>
+        <span className="text-[13px] text-slate-700">Active</span>
       </div>
-
-      {error && <p className="text-[12px] text-red-400">{error}</p>}
-
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="flex items-center gap-1.5 text-[12px] bg-[#FAC515] hover:bg-[#e8b310] disabled:opacity-50 text-black font-medium px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
-      >
-        {saving
-          ? <Loader2 size={12} className="animate-spin" />
-          : success
-            ? <Check size={12} strokeWidth={2.5} className="text-black" />
-            : <Check size={12} strokeWidth={2.5} />}
-        {saving ? "Saving…" : success ? "Saved!" : "Save changes"}
-      </button>
+      {err && <p className="text-[12px] text-red-500">{err}</p>}
+      <div className="flex items-center gap-3">
+        <button onClick={save} disabled={saving || !isDirty} className={btn}>
+          {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.5} />}
+          {saving ? "Saving…" : ok ? "Saved!" : "Save changes"}
+        </button>
+        {isDirty && !saving && (
+          <span className="text-[11px] text-amber-500 font-medium">Unsaved changes</span>
+        )}
+      </div>
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// Tab: Knowledge Base
-// ─────────────────────────────────────────────────────────────
 
 function KnowledgeTab({ clientId }: { clientId: string }) {
-  const [docs, setDocs] = useState<KnowledgeDoc[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [driveUrl, setDriveUrl] = useState("");
-  const [docName, setDocName] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
+  const [docs, setDocs]         = useState<KDoc[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [err, setErr]           = useState<string | null>(null);
+  const [url, setUrl]           = useState("");
+  const [dname, setDname]       = useState("");
+  const [adding, setAdding]     = useState(false);
+  const [addErr, setAddErr]     = useState<string | null>(null);
 
-  const fetchDocs = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/v1/clients/${clientId}/knowledge`, {
-        headers: { "X-Dashboard-Session": "1" },
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setDocs(json.docs);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load documents");
-    } finally {
-      setLoading(false);
-    }
+  const load = useCallback(async () => {
+    setLoading(true); setErr(null);
+    try { const r = await fetch(`/api/v1/clients/${clientId}/knowledge`, { headers: { "X-Dashboard-Session": "1" } }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setDocs(j.docs); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Failed to load"); } finally { setLoading(false); }
   }, [clientId]);
 
-  useEffect(() => { fetchDocs(); }, [fetchDocs]);
+  useEffect(() => { load(); }, [load]);
 
-  async function handleAdd() {
-    if (!driveUrl.trim()) {
-      setAddError("Please enter a Google Drive URL");
-      return;
-    }
-    setAdding(true);
-    setAddError(null);
-    try {
-      const res = await fetch(`/api/v1/clients/${clientId}/knowledge`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" },
-        body: JSON.stringify({ drive_url: driveUrl.trim(), name: docName.trim() || undefined }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setDriveUrl("");
-      setDocName("");
-      await fetchDocs();
-    } catch (e) {
-      setAddError(e instanceof Error ? e.message : "Failed to add document");
-    } finally {
-      setAdding(false);
-    }
+  // Poll while any doc is still processing or pending
+  useEffect(() => {
+    const inFlight = docs.some((d) => d.status === "pending" || d.status === "processing");
+    if (!inFlight) return;
+    const t = setTimeout(async () => {
+      const r = await fetch(`/api/v1/clients/${clientId}/knowledge`, { headers: { "X-Dashboard-Session": "1" } });
+      const j = await r.json();
+      if (r.ok) setDocs(j.docs);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [docs, clientId]);
+
+  async function add() {
+    if (!url.trim()) { setAddErr("Please enter a Google Drive URL"); return; }
+    setAdding(true); setAddErr(null);
+    try { const r = await fetch(`/api/v1/clients/${clientId}/knowledge`, { method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ drive_url: url.trim(), name: dname.trim() || undefined }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setUrl(""); setDname(""); await load(); }
+    catch (e) { setAddErr(e instanceof Error ? e.message : "Failed to add"); } finally { setAdding(false); }
   }
 
-  async function handleDelete(docId: string) {
-    try {
-      await fetch(`/api/v1/clients/${clientId}/knowledge/${docId}`, {
-        method: "DELETE",
-        headers: { "X-Dashboard-Session": "1" },
-      });
-      setDocs((prev) => prev.filter((d) => d.id !== docId));
-    } catch {
-      // Silently fail — user can retry
-    }
+  async function del(id: string) {
+    try { await fetch(`/api/v1/clients/${clientId}/knowledge/${id}`, { method: "DELETE", headers: { "X-Dashboard-Session": "1" } }); setDocs((p) => p.filter((d) => d.id !== id)); } catch { /* ignore */ }
   }
 
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Knowledge Documents</h3>
-        <p className="text-[12px] text-[#cccccc] mt-1 leading-relaxed">
-          Add Google Drive document links. The AI will use these as its knowledge base when answering questions about this client.
-        </p>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={18} className="text-[#FAC515] animate-spin" />
-        </div>
-      ) : error ? (
-        <p className="text-[12px] text-red-400">{error}</p>
-      ) : (
-        <div className="space-y-2">
-          {docs.length === 0 && (
-            <p className="text-[12px] text-[#cccccc] py-4">
-              No documents yet. Add a Google Drive link below.
-            </p>
-          )}
-          {docs.map((doc) => (
-            <div
-              key={doc.id}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#1a1a1a] border border-white/[0.10]"
-            >
-              <FileText size={14} className="text-[#cccccc] flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] text-[#d8d8d8] truncate font-medium">{doc.name}</p>
-                {doc.last_modified_at && (
-                  <p className="text-[11px] text-[#cccccc] mt-0.5">
-                    Modified {formatDate(doc.last_modified_at)}
-                  </p>
-                )}
-              </div>
-              <StatusBadge status={doc.status} />
-              <button
-                onClick={() => handleDelete(doc.id)}
-                aria-label={`Delete ${doc.name}`}
-                className="p-1.5 rounded-md text-[#cccccc] hover:text-[#ef4444] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Add form */}
-      <div className="pt-2 border-t border-white/[0.10] space-y-3">
-        <div>
-          <label className="text-[11px] text-[#cccccc] uppercase tracking-wider block mb-1.5">
-            Google Drive URL
-          </label>
-          <input
-            value={driveUrl}
-            onChange={(e) => setDriveUrl(e.target.value)}
-            placeholder="https://docs.google.com/..."
-            className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#cccccc] outline-none focus:border-[#FAC515]/40 transition-colors"
-          />
-        </div>
-        <div>
-          <label className="text-[11px] text-[#cccccc] uppercase tracking-wider block mb-1.5">
-            Document name (optional)
-          </label>
-          <input
-            value={docName}
-            onChange={(e) => setDocName(e.target.value)}
-            placeholder="e.g. Brand Guidelines"
-            className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#cccccc] outline-none focus:border-[#FAC515]/40 transition-colors"
-          />
-        </div>
-        {addError && <p className="text-[12px] text-red-400">{addError}</p>}
-        <button
-          onClick={handleAdd}
-          disabled={adding}
-          className="flex items-center gap-1.5 text-[12px] bg-[#FAC515] hover:bg-[#e8b310] disabled:opacity-50 text-black font-medium px-3 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
-        >
-          {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} strokeWidth={2.5} />}
-          {adding ? "Adding…" : "Add document"}
-        </button>
+      <div><h3 className="text-[14px] font-semibold text-slate-900">Knowledge Documents</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Add Google Drive links. The AI uses these as its knowledge base for this client.</p></div>
+      {loading ? <div className="flex justify-center py-10"><Loader2 size={18} className="text-[var(--brand)] animate-spin" /></div>
+       : err ? <p className="text-[12px] text-red-500">{err}</p>
+       : <div className="space-y-2">
+           {docs.length === 0 && <p className="text-[12px] text-slate-400 py-3">No documents yet.</p>}
+           {docs.map((doc) => (
+             <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[rgba(41,151,255,0.04)] border border-[var(--border)]">
+               <FileText size={14} className="text-[var(--brand)] flex-shrink-0" />
+               <div className="flex-1 min-w-0"><p className="text-[12px] text-slate-800 truncate font-medium">{doc.name}</p>{doc.last_modified_at && <p className="text-[11px] text-slate-400 mt-0.5">Modified {formatDate(doc.last_modified_at)}</p>}</div>
+               <StatusBadge status={doc.status} />
+               <button onClick={() => del(doc.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+             </div>
+           ))}
+         </div>}
+      <div className="pt-3 border-t border-[var(--border)] space-y-3">
+        <div><label className={lbl}>Google Drive URL</label><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://docs.google.com/..." className={field} /></div>
+        <div><label className={lbl}>Document name <span className="normal-case font-normal text-slate-400">(optional)</span></label><input value={dname} onChange={(e) => setDname(e.target.value)} placeholder="e.g. Brand Guidelines" className={field} /></div>
+        {addErr && <p className="text-[12px] text-red-500">{addErr}</p>}
+        <button onClick={add} disabled={adding} className={btn}>{adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} strokeWidth={2.5} />}{adding ? "Adding…" : "Add document"}</button>
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Tab: PMS Data
-// ─────────────────────────────────────────────────────────────
-
 const PMS_PROVIDERS = [
-  { value: "guesty", label: "Guesty" },
-  { value: "hostaway", label: "Hostaway" },
-  { value: "lodgify", label: "Lodgify" },
+  { value: "guesty",     label: "Guesty" },
+  { value: "hostaway",   label: "Hostaway" },
+  { value: "lodgify",    label: "Lodgify" },
+  { value: "ownerrez",   label: "OwnerRez" },
+  { value: "hostfully",  label: "Hostfully" },
+  { value: "igms",       label: "iGMS" },
+  { value: "smoobu",     label: "Smoobu" },
+  { value: "beds24",     label: "Beds24" },
+  { value: "streamline", label: "Streamline" },
+  { value: "liverez",    label: "LiveRez" },
+  { value: "track",      label: "Track (ResortPro)" },
+  { value: "custom",     label: "Custom / Other" },
 ] as const;
-
-type PmsProvider = "guesty" | "hostaway" | "lodgify";
-
-function getCredentialFields(provider: PmsProvider): { key: string; label: string }[] {
-  if (provider === "hostaway") {
-    return [
-      { key: "account_id", label: "Account ID" },
-      { key: "api_secret", label: "API Secret" },
-    ];
+type PmsProvider = "guesty" | "hostaway" | "lodgify" | "ownerrez" | "hostfully" | "igms" | "smoobu" | "beds24" | "streamline" | "liverez" | "track" | "custom";
+function credFields(p: PmsProvider): { key: string; label: string; type?: string }[] {
+  switch (p) {
+    case "guesty":    return [{ key: "client_id", label: "Client ID" }, { key: "client_secret", label: "Client Secret", type: "password" }];
+    case "hostaway":  return [{ key: "account_id", label: "Account ID" }, { key: "client_secret", label: "Client Secret", type: "password" }];
+    case "ownerrez":  return [{ key: "client_id", label: "Client ID" }, { key: "client_secret", label: "Client Secret", type: "password" }];
+    case "hostfully": return [{ key: "api_key", label: "API Key", type: "password" }, { key: "agency_uid", label: "Agency UID" }];
+    case "beds24":    return [{ key: "entry_id", label: "Entry ID" }, { key: "api_key", label: "API Key", type: "password" }];
+    case "streamline":
+    case "liverez":
+    case "track":     return [{ key: "base_url", label: "Base URL" }, { key: "username", label: "Username" }, { key: "password", label: "Password", type: "password" }];
+    case "custom":    return [{ key: "base_url", label: "Base URL" }, { key: "api_key", label: "API Key", type: "password" }];
+    default:          return [{ key: "api_key", label: "API Key", type: "password" }];
   }
-  return [{ key: "api_key", label: "API Key" }];
 }
 
 function PmsTab({ clientId }: { clientId: string }) {
-  const [connection, setConnection] = useState<PmsConnection | null>(null);
+  const [con, setCon]       = useState<PmsCon | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [provider, setProvider] = useState<PmsProvider>("guesty");
-  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [err, setErr]       = useState<string | null>(null);
+  const [form, setForm]     = useState(false);
+  const [prov, setProv]     = useState<PmsProvider>("guesty");
+  const [creds, setCreds]   = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncErr, setSyncErr] = useState<string | null>(null);
+  const [syncOk, setSyncOk] = useState(false);
 
-  const fetchConnection = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/v1/clients/${clientId}/pms`, {
-        headers: { "X-Dashboard-Session": "1" },
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setConnection(json.connection);
-      if (!json.connection) setShowForm(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load PMS connection");
-    } finally {
-      setLoading(false);
-    }
+  const load = useCallback(async () => {
+    setLoading(true); setErr(null);
+    try { const r = await fetch(`/api/v1/clients/${clientId}/pms`, { headers: { "X-Dashboard-Session": "1" } }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setCon(j.connection); if (!j.connection) setForm(true); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Failed to load"); } finally { setLoading(false); }
   }, [clientId]);
 
-  useEffect(() => { fetchConnection(); }, [fetchConnection]);
+  useEffect(() => { load(); }, [load]);
 
-  function handleCredentialChange(key: string, value: string) {
-    setCredentials((prev) => ({ ...prev, [key]: value }));
+  async function save() {
+    for (const f of credFields(prov)) { if (!creds[f.key]?.trim()) { setSaveErr(`${f.label} is required`); return; } }
+    setSaving(true); setSaveErr(null);
+    try { const r = await fetch(`/api/v1/clients/${clientId}/pms`, { method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ provider: prov, credentials: creds }) }); const j = await r.json(); if (!r.ok) throw new Error(j.error); setCon(j.connection); setForm(false); setCreds({}); }
+    catch (e) { setSaveErr(e instanceof Error ? e.message : "Failed to save"); } finally { setSaving(false); }
   }
 
-  async function handleSave() {
-    const fields = getCredentialFields(provider);
-    for (const f of fields) {
-      if (!credentials[f.key]?.trim()) {
-        setSaveError(`${f.label} is required`);
-        return;
-      }
-    }
-    setSaving(true);
-    setSaveError(null);
+  async function syncNow() {
+    setSyncing(true); setSyncErr(null); setSyncOk(false);
     try {
-      const res = await fetch(`/api/v1/clients/${clientId}/pms`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" },
-        body: JSON.stringify({ provider, credentials }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setConnection(json.connection);
-      setShowForm(false);
-      setCredentials({});
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Failed to save connection");
-    } finally {
-      setSaving(false);
-    }
+      const r = await fetch("/api/v1/pms/sync", { method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ tenant_id: clientId }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error?.message ?? "Sync failed");
+      if (j.data?.errors?.length) throw new Error(j.data.errors[0]);
+      await load();
+      setSyncOk(true);
+      setTimeout(() => setSyncOk(false), 4000);
+    } catch (e) { setSyncErr(e instanceof Error ? e.message : "Sync failed"); }
+    finally { setSyncing(false); }
   }
 
-  const providerLabel = connection
-    ? PMS_PROVIDERS.find((p) => p.value === connection.provider)?.label ?? connection.provider
-    : "";
+  const provLabel = con ? PMS_PROVIDERS.find((p) => p.value === con.provider)?.label ?? con.provider : "";
 
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Property Management System</h3>
-        <p className="text-[12px] text-[#cccccc] mt-1 leading-relaxed">
-          Connect your PMS to give the AI access to bookings, occupancy, and revenue data.
-        </p>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={18} className="text-[#FAC515] animate-spin" />
-        </div>
-      ) : error ? (
-        <p className="text-[12px] text-red-400">{error}</p>
-      ) : connection && !showForm ? (
-        <div className="space-y-4">
-          <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4 space-y-3">
+      <div><h3 className="text-[14px] font-semibold text-slate-900">Property Management System</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Connect your PMS to give the AI access to bookings, occupancy, and revenue data. Syncs automatically every 4 hours.</p></div>
+      {loading ? <div className="flex justify-center py-10"><Loader2 size={18} className="text-[var(--brand)] animate-spin" /></div>
+       : err ? <p className="text-[12px] text-red-500">{err}</p>
+       : con && !form ? (
+        <div className="space-y-3">
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-[12px] font-semibold text-[#FAC515] px-2 py-0.5 rounded-md bg-[#FAC515]/10 border border-[#FAC515]/20">
-                  {providerLabel}
-                </span>
-                {connection.is_active ? (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20">
-                    active
-                  </span>
-                ) : (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#888]/10 text-[#cccccc] border border-white/[0.10]">
-                    inactive
-                  </span>
-                )}
+                <span className="text-[12px] font-semibold text-[var(--brand)] px-2 py-0.5 rounded-lg bg-[rgba(41,151,255,0.1)] border border-[rgba(41,151,255,0.2)]">{provLabel}</span>
+                {con.is_active ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">active</span> : <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">inactive</span>}
               </div>
-              <span className="text-[11px] text-[#cccccc]">
-                {connection.sync_status === "running" ? (
-                  <span className="flex items-center gap-1 text-[#FAC515]">
-                    <Loader2 size={10} className="animate-spin" />
-                    syncing
-                  </span>
-                ) : connection.sync_status === "error" ? (
-                  <span className="text-[#ef4444]">sync error</span>
-                ) : (
-                  "idle"
-                )}
-              </span>
+              <span className="text-[11px] text-slate-400">{con.sync_status === "running" || syncing ? <span className="flex items-center gap-1 text-[var(--brand)]"><Loader2 size={10} className="animate-spin" />syncing</span> : con.sync_status === "error" ? <span className="text-red-500">sync error</span> : "idle"}</span>
             </div>
-            <p className="text-[12px] text-[#cccccc]">
-              Last synced:{" "}
-              <span className="text-[#d8d8d8]">
-                {connection.last_sync_at ? formatDate(connection.last_sync_at) : "Never"}
-              </span>
-            </p>
+            <p className="text-[12px] text-slate-500">Last synced: <span className="text-slate-700">{con.last_sync_at ? formatDate(con.last_sync_at) : "Never"}</span></p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="text-[12px] text-[#cccccc] hover:text-[#ccc] underline underline-offset-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
-          >
-            Update credentials
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {connection && (
-            <button
-              onClick={() => setShowForm(false)}
-              className="flex items-center gap-1.5 text-[12px] text-[#cccccc] hover:text-[#ccc] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
-            >
-              <X size={12} />
-              Cancel
+          <div className="flex items-center gap-3">
+            <button onClick={syncNow} disabled={syncing} className={cn(btn, "text-[12px]")}>
+              {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} strokeWidth={2.5} />}
+              {syncing ? "Syncing…" : "Sync now"}
             </button>
-          )}
-
-          <div>
-            <label className="text-[11px] text-[#cccccc] uppercase tracking-wider block mb-1.5">Provider</label>
-            <select
-              value={provider}
-              onChange={(e) => {
-                setProvider(e.target.value as PmsProvider);
-                setCredentials({});
-              }}
-              className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] outline-none focus:border-[#FAC515]/40 transition-colors appearance-none"
-            >
-              {PMS_PROVIDERS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
-            </select>
+            <button onClick={() => setForm(true)} className="text-[12px] text-slate-400 hover:text-slate-600 underline underline-offset-2 transition-colors">Update credentials</button>
           </div>
-
-          {getCredentialFields(provider).map((field) => (
-            <div key={field.key}>
-              <label className="text-[11px] text-[#cccccc] uppercase tracking-wider block mb-1.5">
-                {field.label}
-              </label>
-              <input
-                type="password"
-                value={credentials[field.key] ?? ""}
-                onChange={(e) => handleCredentialChange(field.key, e.target.value)}
-                placeholder={`Enter ${field.label}`}
-                className="w-full bg-[#1c1c1c] border border-white/[0.14] rounded-lg px-3 py-2 text-[13px] text-[#f0f0ef] placeholder:text-[#cccccc] outline-none focus:border-[#FAC515]/40 transition-colors"
-              />
-            </div>
-          ))}
-
-          {saveError && <p className="text-[12px] text-red-400">{saveError}</p>}
-
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-1.5 text-[12px] bg-[#FAC515] hover:bg-[#e8b310] disabled:opacity-50 text-black font-medium px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
-          >
-            {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.5} />}
-            {saving ? "Saving…" : "Save connection"}
-          </button>
+          {syncOk && <p className="text-[12px] text-[#30d158] font-medium">Sync completed successfully.</p>}
+          {syncErr && <p className="text-[12px] text-red-500">{syncErr}</p>}
         </div>
-      )}
+       ) : (
+        <div className="space-y-4">
+          {con && <button onClick={() => setForm(false)} className="flex items-center gap-1.5 text-[12px] text-slate-400 hover:text-slate-600 transition-colors"><X size={12} />Cancel</button>}
+          <div><label className={lbl}>Provider</label><select value={prov} onChange={(e) => { setProv(e.target.value as PmsProvider); setCreds({}); }} className={cn(field, "appearance-none cursor-pointer")}>{PMS_PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
+          {credFields(prov).map((f) => (<div key={f.key}><label className={lbl}>{f.label}</label><input type={f.type ?? "text"} value={creds[f.key] ?? ""} onChange={(e) => setCreds((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={`Enter ${f.label}`} className={field} /></div>))}
+          {saveErr && <p className="text-[12px] text-red-500">{saveErr}</p>}
+          <button onClick={save} disabled={saving} className={btn}>{saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.5} />}{saving ? "Saving…" : "Save connection"}</button>
+        </div>
+       )}
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// Tab: Meta Ads
-// ─────────────────────────────────────────────────────────────
 
 function MetaTab({ clientId }: { clientId: string }) {
-  const [connection, setConnection] = useState<MetaConnection | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  // There is no dashboard-session meta status route yet.
-  // The connect flow redirects to Meta OAuth which carries tenant_id as a query param.
-  // We show the connect UI directly; connection state is surfaced after OAuth completes.
-  void connection;
-  void loading;
-
-  const connectUrl = `/api/v1/meta-ads/connect?tenant_id=${clientId}`;
-
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Meta Advertising Account</h3>
-        <p className="text-[12px] text-[#cccccc] mt-1 leading-relaxed">
-          Connect your Meta Ads account to give the AI access to campaign performance, spend, and audience data.
-        </p>
+      <div><h3 className="text-[14px] font-semibold text-slate-900">Meta Advertising Account</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Connect your Meta Ads account to give the AI access to campaign performance, spend, and audience data.</p></div>
+      <div className="bg-white border border-[var(--border)] rounded-2xl p-5 space-y-4 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
+        <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-300" /><span className="text-[13px] text-slate-500">Not connected</span></div>
+        <a href={`/api/v1/meta-ads/connect?tenant_id=${clientId}`} className="inline-flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] text-white font-semibold px-4 py-2 rounded-xl transition-colors">Connect Meta Account</a>
+        <p className="text-[11px] text-slate-400">Connecting will redirect you to Meta to authorise access.</p>
       </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={18} className="text-[#FAC515] animate-spin" />
-        </div>
-      ) : connection ? (
-        <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-[12px] font-semibold text-[#22c55e]">Connected</span>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/20">
-              active
-            </span>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-[12px] text-[#cccccc]">
-              Ad account:{" "}
-              <span className="text-[#d8d8d8] font-mono">{connection.ad_account_id}</span>
-            </p>
-            {connection.token_expires_at && (
-              <p className="text-[12px] text-[#cccccc]">
-                Token expires:{" "}
-                <span className="text-[#d8d8d8]">{formatDate(connection.token_expires_at)}</span>
-              </p>
-            )}
-            <p className="text-[12px] text-[#cccccc]">
-              Last synced:{" "}
-              <span className="text-[#d8d8d8]">
-                {connection.last_sync_at ? formatDate(connection.last_sync_at) : "Never"}
-              </span>
-            </p>
-          </div>
-          <button className="text-[12px] text-[#ef4444] hover:text-[#ff6b6b] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50">
-            Disconnect
-          </button>
-        </div>
-      ) : (
-        <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#555]" />
-            <span className="text-[13px] text-[#cccccc]">Not connected</span>
-          </div>
-          <a
-            href={connectUrl}
-            className="inline-flex items-center gap-1.5 text-[12px] bg-[#FAC515] hover:bg-[#e8b310] text-black font-medium px-4 py-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50"
-          >
-            Connect Meta Account
-          </a>
-          <p className="text-[11px] text-[#cccccc]">
-            Connecting will redirect you to Meta to authorise access.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// Tab: Performance
-// ─────────────────────────────────────────────────────────────
 
 function PerformanceTab() {
-  const metrics = [
-    { label: "Occupancy rate", detail: "from PMS bookings" },
-    { label: "Average daily rate (ADR)", detail: "from PMS revenue" },
-    { label: "RevPAR", detail: "calculated from occupancy × ADR" },
-    { label: "ROAS", detail: "from Meta Ads spend vs revenue" },
-    { label: "CTR & CPM", detail: "from Meta Ads insights" },
-  ];
-
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Performance Data</h3>
-        <p className="text-[12px] text-[#cccccc] mt-1 leading-relaxed">
-          Overall performance metrics are automatically calculated from your connected PMS and Meta Ads data.
-        </p>
-      </div>
-
-      <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4 space-y-3">
-        {metrics.map(({ label, detail }) => (
-          <div key={label} className="flex items-start gap-2.5">
-            <Check size={14} className="text-[#22c55e] flex-shrink-0 mt-0.5" strokeWidth={2.5} />
-            <div>
-              <span className="text-[12px] text-[#d8d8d8] font-medium">{label}</span>
-              <span className="text-[12px] text-[#cccccc]"> — {detail}</span>
-            </div>
-          </div>
+      <div><h3 className="text-[14px] font-semibold text-slate-900">Performance Data</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Metrics are automatically calculated from connected PMS and Meta Ads data.</p></div>
+      <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
+        {[["Occupancy rate", "from PMS bookings"], ["Average daily rate (ADR)", "from PMS revenue"], ["RevPAR", "calculated from occupancy × ADR"], ["ROAS", "from Meta Ads spend vs revenue"], ["CTR & CPM", "from Meta Ads insights"]].map(([l, d]) => (
+          <div key={l} className="flex items-start gap-2.5"><Check size={14} className="text-[#30d158] flex-shrink-0 mt-0.5" strokeWidth={2.5} /><div><span className="text-[12px] text-slate-800 font-medium">{l}</span><span className="text-[12px] text-slate-400"> — {d}</span></div></div>
         ))}
       </div>
-
-      <p className="text-[12px] text-[#cccccc] leading-relaxed">
-        Data refreshes automatically every 2–4 hours once your PMS and Meta Ads accounts are connected.
-      </p>
+      <p className="text-[12px] text-slate-400 leading-relaxed">Data refreshes every 2–4 hours once PMS and Meta Ads are connected.</p>
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────
-// Tab: Audiences
-// ─────────────────────────────────────────────────────────────
 
 function AudiencesTab() {
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="text-[14px] font-semibold text-[#f0f0ef]">Audience Assets & Campaign History</h3>
-        <p className="text-[12px] text-[#cccccc] mt-1 leading-relaxed">
-          Audience segments and promotional campaign history are synced from your connected Meta Ads account.
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-[12px] font-semibold text-[#cccccc] uppercase tracking-wider mb-2">
-            Custom Audiences
-          </h4>
-          <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4">
-            <p className="text-[12px] text-[#cccccc] leading-relaxed">
-              Audience data syncs automatically from your Meta Ads connection. Once connected, custom audiences,
-              lookalike audiences, and saved audiences will appear here.
-            </p>
-            <p className="text-[11px] text-[#cccccc] mt-2">
-              Connect Meta Ads to enable this.
-            </p>
-          </div>
+      <div><h3 className="text-[14px] font-semibold text-slate-900">Audience Assets & Campaign History</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Synced from your connected Meta Ads account.</p></div>
+      {[["Custom Audiences", "Once connected, custom, lookalike, and saved audiences will appear here."], ["Campaign History", "Campaign history is imported from Meta Ads. The AI uses this to analyse past performance."]].map(([t, b]) => (
+        <div key={t}>
+          <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">{t}</h4>
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-4 shadow-[0_4px_16px_rgba(15,23,42,0.04)]"><p className="text-[12px] text-slate-500 leading-relaxed">{b}</p><p className="text-[11px] text-slate-400 mt-2">Connect Meta Ads to enable this.</p></div>
         </div>
-
-        <div>
-          <h4 className="text-[12px] font-semibold text-[#cccccc] uppercase tracking-wider mb-2">
-            Campaign History
-          </h4>
-          <div className="bg-[#1a1a1a] border border-white/[0.10] rounded-xl p-4">
-            <p className="text-[12px] text-[#cccccc] leading-relaxed">
-              Campaign history is imported from Meta Ads. The AI uses this data to analyse past campaign
-              performance and inform recommendations.
-            </p>
-            <p className="text-[11px] text-[#cccccc] mt-2">
-              Connect Meta Ads to enable this.
-            </p>
-          </div>
-        </div>
-      </div>
+      ))}
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────
-// Main: ClientSettingsPanel
-// ─────────────────────────────────────────────────────────────
-
 export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("general");
-
-  const swatchColor = SWATCH_COLORS[clientIndex % SWATCH_COLORS.length];
-  const initials = getInitials(client.name);
+  const swatch = SWATCH_COLORS[clientIndex % SWATCH_COLORS.length];
 
   return (
     <div className="flex flex-col h-full">
-      {/* Client header */}
       <div className="flex items-center gap-3 mb-5 flex-shrink-0">
-        <div
-          className={cn(
-            "w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 text-[13px] font-semibold",
-            swatchColor
-          )}
-        >
-          {initials}
-        </div>
+        <div className={cn("w-10 h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 text-[13px] font-semibold", swatch)}>{getInitials(client.name)}</div>
         <div className="flex-1 min-w-0">
-          <p className="text-[16px] font-semibold text-[#f0f0ef] truncate leading-tight">
-            {client.name}
-          </p>
-          <p className="text-[11px] text-[#cccccc] font-mono truncate">{client.slug}</p>
+          <p className="text-[16px] font-semibold text-slate-900 truncate leading-tight">{client.name}</p>
+          <p className="text-[11px] text-slate-400 font-mono truncate">{client.slug}</p>
         </div>
-        <span
-          className={cn(
-            "text-[11px] px-2 py-0.5 rounded-full border flex-shrink-0",
-            client.is_active
-              ? "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20"
-              : "bg-white/[0.03] text-[#cccccc] border-white/[0.06]"
-          )}
-        >
+        <span className={cn("text-[11px] px-2.5 py-0.5 rounded-full border flex-shrink-0 font-medium", client.is_active ? "bg-[rgba(48,209,88,0.1)] text-[#30d158] border-[rgba(48,209,88,0.2)]" : "bg-slate-100 text-slate-400 border-slate-200")}>
           {client.is_active ? "active" : "inactive"}
         </span>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-0 border-b border-white/[0.10] mb-5 flex-shrink-0 overflow-x-auto">
+      <div className="flex items-center border-b border-[var(--border)] mb-5 flex-shrink-0 overflow-x-auto">
         {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "text-[12px] px-3 py-2.5 whitespace-nowrap border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-inset",
-              activeTab === tab.id
-                ? "text-[#f0f0ef] border-[#FAC515]"
-                : "text-[#cccccc] hover:text-[#ccc] border-transparent"
-            )}
-          >
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={cn("text-[12px] px-3 py-2.5 whitespace-nowrap border-b-2 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-inset",
+              activeTab === tab.id ? "text-[var(--brand)] border-[var(--brand)]" : "text-slate-500 hover:text-slate-800 border-transparent")}>
             {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === "general" && <GeneralTab client={client} onUpdate={onUpdate} />}
-        {activeTab === "knowledge" && <KnowledgeTab clientId={client.id} />}
-        {activeTab === "pms" && <PmsTab clientId={client.id} />}
-        {activeTab === "meta" && <MetaTab clientId={client.id} />}
+        {activeTab === "general"     && <GeneralTab client={client} onUpdate={onUpdate} />}
+        {activeTab === "knowledge"   && <KnowledgeTab clientId={client.id} />}
+        {activeTab === "pms"         && <PmsTab clientId={client.id} />}
+        {activeTab === "meta"        && <MetaTab clientId={client.id} />}
         {activeTab === "performance" && <PerformanceTab />}
-        {activeTab === "audiences" && <AudiencesTab />}
+        {activeTab === "audiences"   && <AudiencesTab />}
       </div>
     </div>
   );

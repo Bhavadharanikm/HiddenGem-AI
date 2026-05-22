@@ -3,6 +3,7 @@ import { getPmsDataTool, executeGetPmsData } from "./get-pms-data";
 import { getMetaAdsTool, executeGetMetaAds } from "./get-meta-ads";
 import { getPerformanceTool, executeGetPerformance } from "./get-performance";
 import { getAudienceAssetsTool, executeGetAudienceAssets } from "./get-audience-assets";
+import { saveMemoryTool, executeSaveMemory } from "./save-memory";
 
 export const ALL_TOOLS = [
   searchKnowledgeTool,
@@ -10,6 +11,7 @@ export const ALL_TOOLS = [
   getMetaAdsTool,
   getPerformanceTool,
   getAudienceAssetsTool,
+  saveMemoryTool,
 ];
 
 export async function executeTool(
@@ -28,6 +30,8 @@ export async function executeTool(
       return executeGetPerformance(tenantId, input as Parameters<typeof executeGetPerformance>[1]);
     case "get_audience_assets":
       return executeGetAudienceAssets(tenantId, input as Parameters<typeof executeGetAudienceAssets>[1]);
+    case "save_memory":
+      return executeSaveMemory(tenantId, input as Parameters<typeof executeSaveMemory>[1]);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

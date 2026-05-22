@@ -1,5 +1,5 @@
 CREATE TABLE meta_connections (
-  id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id        UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   ad_account_id    TEXT NOT NULL,
   page_id          TEXT,
@@ -13,7 +13,7 @@ CREATE TABLE meta_connections (
 );
 
 CREATE TABLE meta_campaigns (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   connection_id   UUID NOT NULL REFERENCES meta_connections(id) ON DELETE CASCADE,
   external_id     TEXT NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE meta_campaigns (
 );
 
 CREATE TABLE meta_ad_insights (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   campaign_id     UUID REFERENCES meta_campaigns(id) ON DELETE CASCADE,
   date_start      DATE NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE meta_ad_insights (
 );
 
 CREATE TABLE meta_audiences (
-  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id         UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   connection_id     UUID NOT NULL REFERENCES meta_connections(id) ON DELETE CASCADE,
   external_id       TEXT NOT NULL,

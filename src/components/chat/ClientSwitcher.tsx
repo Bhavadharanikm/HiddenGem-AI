@@ -21,10 +21,10 @@ function getInitials(name: string): string {
 }
 
 const SWATCH_COLORS = [
-  "bg-[#FAC515]/15 text-[#FAC515] border-[#FAC515]/25",
-  "bg-amber-600/15 text-amber-500 border-amber-600/25",
-  "bg-yellow-700/15 text-yellow-500 border-yellow-700/25",
-  "bg-orange-700/15 text-orange-500 border-orange-700/25",
+  "bg-[rgba(41,151,255,0.12)] text-[#2997ff] border-[rgba(41,151,255,0.2)]",
+  "bg-[rgba(255,159,10,0.12)] text-[#ff9f0a] border-[rgba(255,159,10,0.2)]",
+  "bg-[rgba(48,209,88,0.12)] text-[#30d158] border-[rgba(48,209,88,0.2)]",
+  "bg-[rgba(191,90,242,0.12)] text-[#bf5af2] border-[rgba(191,90,242,0.2)]",
 ];
 
 export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
@@ -68,10 +68,10 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         aria-expanded={open}
         aria-label="Select client"
         className={cn(
-          "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg",
-          "hover:bg-white/[0.05] transition-colors text-left",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50 focus-visible:ring-offset-1 focus-visible:ring-offset-[#0c0c0c]",
-          open && "bg-white/[0.05]"
+          "flex w-full items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-2 text-left transition-colors",
+          "hover:border-[var(--border)] hover:bg-white/60",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-1 focus-visible:ring-offset-white",
+          open && "border-[var(--border)] bg-white/70"
         )}
       >
         {selected ? (
@@ -84,16 +84,16 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
             >
               {getInitials(selected.name)}
             </div>
-            <span className="text-[13px] text-[#f0f0ef] font-medium truncate flex-1 min-w-0">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-900">
               {selected.name}
             </span>
           </>
         ) : (
           <>
-            <div className="w-7 h-7 rounded-md bg-[#0c0c0c] border border-white/[0.07] flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px] text-[#d0d0d0]">—</span>
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-white/70">
+              <span className="text-[10px] text-slate-400">—</span>
             </div>
-            <span className="text-[13px] text-[#d0d0d0] flex-1">
+            <span className="flex-1 text-[13px] text-slate-500">
               Select client
             </span>
           </>
@@ -101,31 +101,31 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         <ChevronDown
           size={12}
           className={cn(
-            "text-[#d0d0d0] transition-transform duration-150 flex-shrink-0",
+            "flex-shrink-0 text-slate-400 transition-transform duration-150",
             open && "rotate-180"
           )}
         />
       </button>
 
       {open && (
-        <div role="listbox" aria-label="Clients" className="absolute top-full left-0 right-0 mt-1 bg-[#111111] border border-white/[0.08] rounded-xl shadow-2xl shadow-black/90 z-50 overflow-hidden animate-slide-up">
+        <div role="listbox" aria-label="Clients" className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-[var(--border)] bg-[rgba(255,255,255,0.94)] shadow-[0_22px_50px_rgba(15,23,42,0.14)] animate-slide-up backdrop-blur-xl">
           {/* Search input */}
-          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.06]">
-            <Search size={12} className="text-[#cccccc] flex-shrink-0" aria-hidden={true} />
+          <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-2.5">
+            <Search size={12} className="flex-shrink-0 text-slate-400" aria-hidden={true} />
             <input
               ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search clients…"
               aria-label="Search clients"
-              className="flex-1 bg-transparent text-[12.5px] text-[#f0f0ef] placeholder:text-[#cccccc] outline-none"
+              className="flex-1 bg-transparent text-[12.5px] text-slate-900 placeholder:text-slate-400 outline-none"
             />
           </div>
 
           {/* List */}
           <div className="py-1 max-h-52 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="text-[12px] text-[#d0d0d0] px-3 py-3 text-center">
+              <p className="px-3 py-3 text-center text-[12px] text-slate-500">
                 No clients found
               </p>
             ) : (
@@ -143,11 +143,11 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
                       setSearch("");
                     }}
                     className={cn(
-                      "flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FAC515]/50",
+                      "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]",
                       isActive
-                        ? "bg-[#FAC515]/[0.06]"
-                        : "hover:bg-white/[0.04]"
+                        ? "bg-[rgba(41,151,255,0.08)]"
+                        : "hover:bg-[rgba(41,151,255,0.04)]"
                     )}
                   >
                     <div
@@ -161,7 +161,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
                     <span
                       className={cn(
                         "text-[12.5px] flex-1 truncate",
-                        isActive ? "text-[#f0f0ef]" : "text-[#cccccc]"
+                        isActive ? "text-slate-900" : "text-slate-600"
                       )}
                     >
                       {client.name}
@@ -169,7 +169,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
                     {isActive && (
                       <Check
                         size={11}
-                        className="text-[#FAC515] flex-shrink-0"
+                        className="flex-shrink-0 text-[var(--brand)]"
                       />
                     )}
                   </button>

@@ -9,6 +9,22 @@ export async function assembleSystemPrompt(tenantId: string): Promise<string> {
     .eq("id", tenantId)
     .single();
 
+  const [{ data: memories }, { data: recentConvs }] = await Promise.all([
+    db
+      .from("client_memories")
+      .select("content, category, created_at")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(40),
+    db
+      .from("conversations")
+      .select("summary, updated_at")
+      .eq("tenant_id", tenantId)
+      .not("summary", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(5),
+  ]);
+
   const { count: propertyCount } = await db
     .from("pms_properties")
     .select("id", { count: "exact", head: true })
@@ -60,11 +76,31 @@ You have access to tools to retrieve:
 - Be concise and analytical — lead with the key insight, then supporting details
 - When data is unavailable, explain what connection or sync is needed
 - Format numbers clearly: use $ for currency, % for rates, commas for thousands
-- If asked to compare periods, pull data for both periods before answering`;
+- If asked to compare periods, pull data for both periods before answering
+- For any support requests, technical issues, integration problems, or questions you cannot resolve, direct the user to contact Leshan at leshan@hiddengem.media. Use exactly this format: "contact Leshan at leshan@hiddengem.media". Do not separate the name and email, do not assume gender, do not add extra words between the name and email address.`;
 
   const customPrompt = tenant?.system_prompt
     ? `\n\n## Client-Specific Instructions\n${tenant.system_prompt}`
     : "";
 
-  return basePrompt + customPrompt;
+  let memorySection = "";
+  if (memories && memories.length > 0) {
+    const grouped: Record<string, string[]> = {};
+    for (const m of memories) {
+      if (!grouped[m.category]) grouped[m.category] = [];
+      grouped[m.category].push(m.content);
+    }
+    const lines = Object.entries(grouped)
+      .map(([cat, items]) => `**${cat.charAt(0).toUpperCase() + cat.slice(1)}s:**\n${items.map((c) => `- ${c}`).join("\n")}`)
+      .join("\n\n");
+    memorySection = `\n\n## What You Remember About This Client\n${lines}`;
+  }
+
+  let summarySection = "";
+  if (recentConvs && recentConvs.length > 0) {
+    const summaries = recentConvs.map((c, i) => `${i + 1}. ${c.summary}`).join("\n");
+    summarySection = `\n\n## Recent Conversation Summaries\n${summaries}`;
+  }
+
+  return basePrompt + memorySection + summarySection + customPrompt;
 }

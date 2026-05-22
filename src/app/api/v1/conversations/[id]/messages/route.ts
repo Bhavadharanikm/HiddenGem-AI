@@ -7,8 +7,18 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await validateApiKey(req);
-  if (!auth) return error("UNAUTHORIZED", "Invalid or missing API key");
+  const isDashboard = req.headers.get("X-Dashboard-Session") === "1";
+  let tenantId: string;
+
+  if (isDashboard) {
+    const t = req.nextUrl.searchParams.get("tenant_id");
+    if (!t) return error("UNAUTHORIZED", "tenant_id required for dashboard session");
+    tenantId = t;
+  } else {
+    const auth = await validateApiKey(req);
+    if (!auth) return error("UNAUTHORIZED", "Invalid or missing API key");
+    tenantId = auth.tenantId;
+  }
 
   const { id: conversationId } = await params;
   const db = getServiceClient();
@@ -17,7 +27,7 @@ export async function GET(
     .from("conversations")
     .select("id")
     .eq("id", conversationId)
-    .eq("tenant_id", auth.tenantId)
+    .eq("tenant_id", tenantId)
     .maybeSingle();
 
   if (!conv) return error("NOT_FOUND", "Conversation not found");
@@ -29,7 +39,7 @@ export async function GET(
     .from("messages")
     .select("id, role, content, input_tokens, output_tokens, created_at")
     .eq("conversation_id", conversationId)
-    .eq("tenant_id", auth.tenantId)
+    .eq("tenant_id", tenantId)
     .order("created_at", { ascending: true })
     .limit(limit + 1);
 

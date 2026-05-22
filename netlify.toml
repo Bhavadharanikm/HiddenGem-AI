@@ -8,6 +8,9 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."pms-sync"]
+  schedule = "0 */4 * * *"
+
 # Environment variables that must be set in the Netlify dashboard:
 # ANTHROPIC_API_KEY
 # NEXT_PUBLIC_SUPABASE_URL
@@ -16,3 +19,5 @@
 # OPENAI_API_KEY
 # UPSTASH_REDIS_REST_URL
 # UPSTASH_REDIS_REST_TOKEN
+# CRON_SECRET            — random secret used to authenticate the /api/v1/cron/pms-sync route
+# URL                    — set automatically by Netlify (deploy URL); used by the pms-sync scheduled function

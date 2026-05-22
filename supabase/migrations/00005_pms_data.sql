@@ -1,5 +1,5 @@
 CREATE TABLE pms_connections (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   provider      TEXT NOT NULL CHECK (provider IN ('guesty', 'hostaway', 'lodgify', 'custom')),
   credentials   JSONB NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE pms_connections (
 );
 
 CREATE TABLE pms_properties (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   connection_id   UUID NOT NULL REFERENCES pms_connections(id) ON DELETE CASCADE,
   external_id     TEXT NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE pms_properties (
 );
 
 CREATE TABLE pms_bookings (
-  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id         UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   property_id       UUID NOT NULL REFERENCES pms_properties(id) ON DELETE CASCADE,
   external_id       TEXT NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE pms_bookings (
 );
 
 CREATE TABLE pms_reviews (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   property_id   UUID NOT NULL REFERENCES pms_properties(id) ON DELETE CASCADE,
   external_id   TEXT NOT NULL,

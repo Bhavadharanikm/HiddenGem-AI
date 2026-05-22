@@ -32,7 +32,7 @@ export async function POST(
 
   const { id } = await params;
 
-  let body: { provider: "guesty" | "hostaway" | "lodgify"; credentials: Record<string, string> };
+  let body: { provider: string; credentials: Record<string, string> };
   try {
     body = await req.json();
   } catch {
@@ -50,7 +50,7 @@ export async function POST(
     .upsert(
       {
         tenant_id: id,
-        provider: body.provider,
+        provider: body.provider as "guesty" | "hostaway" | "lodgify" | "custom",
         credentials: body.credentials,
         is_active: true,
         sync_status: "idle",
