@@ -59,13 +59,15 @@ export async function POST(req: NextRequest) {
     const { after } = await import("next/server");
     const { createPMSAdapter } = await import("@/lib/pms/factory");
     const { dispatchWebhook } = await import("@/lib/webhooks/dispatcher");
+    const { decryptCredentials } = await import("@/lib/crypto/credentials");
     type PMSProvider = import("@/lib/pms/adapter").PMSProvider;
 
     after(async () => {
       let totalProperties = 0, totalBookings = 0;
       for (const conn of connections) {
         try {
-          const adapter = createPMSAdapter(conn.provider as PMSProvider, conn.credentials as Record<string, string>);
+          const credentials = await decryptCredentials(conn.credentials);
+          const adapter = createPMSAdapter(conn.provider as PMSProvider, credentials);
           const properties = await adapter.fetchProperties();
           if (properties.length > 0) {
             const propRows = properties.map((p) => ({

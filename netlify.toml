@@ -18,3 +18,4 @@
 # SUPABASE_SERVICE_ROLE_KEY
 # CRON_SECRET            — random secret; authenticates /api/v1/cron/pms-sync and pms-sync-bg background function
 # URL                    — set automatically by Netlify (deploy URL); used to invoke pms-sync-bg
+# PMS_ENCRYPTION_KEY     — 64-char hex string (32 bytes); encrypts PMS credentials at rest. Generate: openssl rand -hex 32

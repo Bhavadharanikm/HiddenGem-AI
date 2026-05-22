@@ -2,6 +2,7 @@ import type { Config } from "@netlify/functions";
 import { createClient } from "@supabase/supabase-js";
 import { createPMSAdapter } from "../../src/lib/pms/factory";
 import type { PMSProvider } from "../../src/lib/pms/adapter";
+import { decryptCredentials } from "../../src/lib/crypto/credentials";
 
 function getDb() {
   return createClient(
@@ -40,10 +41,8 @@ export default async function handler(req: Request) {
 
   for (const conn of connections) {
     try {
-      const adapter = createPMSAdapter(
-        conn.provider as PMSProvider,
-        conn.credentials as Record<string, string>
-      );
+      const credentials = await decryptCredentials(conn.credentials);
+      const adapter = createPMSAdapter(conn.provider as PMSProvider, credentials);
 
       // ── Properties ────────────────────────────────────────────────
       const properties = await adapter.fetchProperties();

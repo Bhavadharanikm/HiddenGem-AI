@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/service";
+import { encryptCredentials } from "@/lib/crypto/credentials";
 
 function isDashboard(req: NextRequest) {
   return req.headers.get("X-Dashboard-Session") === "1";
@@ -45,13 +46,15 @@ export async function POST(
 
   const db = getServiceClient();
 
+  const encryptedCredentials = await encryptCredentials(body.credentials);
+
   const { data, error } = await db
     .from("pms_connections")
     .upsert(
       {
         tenant_id: id,
         provider: body.provider as "guesty" | "hostaway" | "lodgify" | "custom",
-        credentials: body.credentials,
+        credentials: encryptedCredentials,
         is_active: true,
         sync_status: "idle",
       },
