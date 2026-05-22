@@ -344,15 +344,170 @@ function PmsTab({ clientId }: { clientId: string }) {
   );
 }
 
+type MetaStatus = {
+  connected: boolean;
+  token_expires_at?: string | null;
+  accounts: Array<{ id: string; name: string }>;
+};
+type MetaAssignment = { ad_account_id: string; account_name: string | null; last_sync_at: string | null; is_active: boolean } | null;
+
 function MetaTab({ clientId }: { clientId: string }) {
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [status, setStatus]               = useState<MetaStatus>({ connected: false, accounts: [] });
+  const [assignment, setAssignment]       = useState<MetaAssignment>(null);
+  const [selectedId, setSelectedId]       = useState("");
+  const [connecting, setConnecting]       = useState(false);
+  const [assigning, setAssigning]         = useState(false);
+  const [syncing, setSyncing]             = useState(false);
+  const [syncOk, setSyncOk]               = useState(false);
+  const [err, setErr]                     = useState<string | null>(null);
+
+  const loadAll = useCallback(async () => {
+    setStatusLoading(true); setErr(null);
+    try {
+      const [sr, ar] = await Promise.all([
+        fetch("/api/v1/meta-ads/status", { headers: { "X-Dashboard-Session": "1" } }),
+        fetch(`/api/v1/meta-ads/assign?tenant_id=${clientId}`, { headers: { "X-Dashboard-Session": "1" } }),
+      ]);
+      const [sj, aj] = await Promise.all([sr.json(), ar.json()]);
+      if (sr.ok) setStatus(sj.data);
+      if (ar.ok) { setAssignment(aj.data.assignment); setSelectedId(aj.data.assignment?.ad_account_id ?? ""); }
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed to load"); }
+    finally { setStatusLoading(false); }
+  }, [clientId]);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  async function connect() {
+    setConnecting(true); setErr(null);
+    try {
+      const r = await fetch("/api/v1/meta-ads/connect", { headers: { "X-Dashboard-Session": "1" } });
+      const j = await r.json();
+      if (!r.ok || !j.data?.auth_url) throw new Error(j.error?.message ?? j.error ?? "Failed to get auth URL");
+      window.location.href = j.data.auth_url;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to connect");
+      setConnecting(false);
+    }
+  }
+
+  async function assign() {
+    if (!selectedId) return;
+    setAssigning(true); setErr(null);
+    try {
+      const accountName = status.accounts.find((a) => a.id === selectedId)?.name;
+      const r = await fetch("/api/v1/meta-ads/assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" },
+        body: JSON.stringify({ tenant_id: clientId, ad_account_id: selectedId, account_name: accountName }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error?.message ?? "Failed to assign");
+      setAssignment(j.data.assignment);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed to assign"); }
+    finally { setAssigning(false); }
+  }
+
+  async function syncNow() {
+    setSyncing(true); setSyncOk(false); setErr(null);
+    try {
+      const r = await fetch("/api/v1/meta-ads/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" },
+        body: JSON.stringify({ tenant_id: clientId }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error?.message ?? "Sync failed");
+      setSyncOk(true);
+      setTimeout(() => setSyncOk(false), 4000);
+      await loadAll();
+    } catch (e) { setErr(e instanceof Error ? e.message : "Sync failed"); }
+    finally { setSyncing(false); }
+  }
+
   return (
     <div className="space-y-5">
-      <div><h3 className="text-[14px] font-semibold text-slate-900">Meta Advertising Account</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Connect your Meta Ads account to give the AI access to campaign performance, spend, and audience data.</p></div>
-      <div className="bg-white border border-[var(--border)] rounded-2xl p-5 space-y-4 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
-        <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-300" /><span className="text-[13px] text-slate-500">Not connected</span></div>
-        <a href={`/api/v1/meta-ads/connect?tenant_id=${clientId}`} className="inline-flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] text-white font-semibold px-4 py-2 rounded-xl transition-colors">Connect Meta Account</a>
-        <p className="text-[11px] text-slate-400">Connecting will redirect you to Meta to authorise access.</p>
+      <div>
+        <h3 className="text-[14px] font-semibold text-slate-900">Meta Advertising Account</h3>
+        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">One agency Meta account manages all clients. Connect once, then assign each client to their ad account.</p>
       </div>
+
+      {statusLoading ? (
+        <div className="flex justify-center py-10"><Loader2 size={18} className="text-[var(--brand)] animate-spin" /></div>
+      ) : (
+        <>
+          {/* Agency connection status */}
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-slate-600">Agency Connection</span>
+              {status.connected
+                ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">connected</span>
+                : <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">not connected</span>}
+            </div>
+            {status.connected && status.token_expires_at && (
+              <p className="text-[11px] text-slate-400">Token expires: {formatDate(status.token_expires_at)}</p>
+            )}
+            <button onClick={connect} disabled={connecting} className={cn(btn, "text-[12px]")}>
+              {connecting ? <Loader2 size={12} className="animate-spin" /> : null}
+              {connecting ? "Redirecting…" : status.connected ? "Reconnect Meta Account" : "Connect Meta Account"}
+            </button>
+          </div>
+
+          {/* Ad account assignment (only shown when agency is connected) */}
+          {status.connected && (
+            <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
+              <span className="text-[12px] font-semibold text-slate-600">Client Ad Account</span>
+              {assignment ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] font-semibold text-[var(--brand)] px-2 py-0.5 rounded-lg bg-[rgba(41,151,255,0.1)] border border-[rgba(41,151,255,0.2)]">
+                      {assignment.account_name ?? `act_${assignment.ad_account_id}`}
+                    </span>
+                    <span className="text-[11px] text-slate-400">act_{assignment.ad_account_id}</span>
+                  </div>
+                  {assignment.last_sync_at && (
+                    <p className="text-[12px] text-slate-500">Last synced: <span className="text-slate-700">{formatDateTime(assignment.last_sync_at)}</span></p>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <button onClick={syncNow} disabled={syncing} className={cn(btn, "text-[12px]")}>
+                      {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} strokeWidth={2.5} />}
+                      {syncing ? "Syncing…" : "Sync now"}
+                    </button>
+                    <button onClick={() => setAssignment(null)} className="text-[12px] text-slate-400 hover:text-slate-600 underline underline-offset-2 transition-colors">Change account</button>
+                  </div>
+                  {syncOk && <p className="text-[12px] text-[#30d158] font-medium">Sync completed successfully.</p>}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {status.accounts.length > 0 ? (
+                    <>
+                      <p className="text-[12px] text-slate-500">Select which ad account belongs to this client:</p>
+                      <select
+                        value={selectedId}
+                        onChange={(e) => setSelectedId(e.target.value)}
+                        className={cn(field, "appearance-none cursor-pointer")}
+                      >
+                        <option value="">— select an ad account —</option>
+                        {status.accounts.map((a) => (
+                          <option key={a.id} value={a.id}>{a.name} (act_{a.id})</option>
+                        ))}
+                      </select>
+                      <button onClick={assign} disabled={assigning || !selectedId} className={cn(btn, "text-[12px]")}>
+                        {assigning ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.5} />}
+                        {assigning ? "Assigning…" : "Assign account"}
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-[12px] text-slate-500">No ad accounts found. Make sure the Meta token has <code className="text-[11px] bg-slate-100 px-1 rounded">ads_read</code> permission.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {err && <p className="text-[12px] text-red-500">{err}</p>}
+        </>
+      )}
     </div>
   );
 }

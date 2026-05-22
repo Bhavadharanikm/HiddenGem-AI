@@ -36,7 +36,7 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="h-full">{children}</body>
+      <body className="h-full" suppressHydrationWarning>{children}</body>
     </html>
   );
 }

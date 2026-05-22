@@ -25,31 +25,38 @@ export async function syncMetaAds(tenantId: string): Promise<{
 }> {
   const db = getServiceClient();
 
-  const { data: conn } = await db
-    .from("meta_connections")
-    .select("id, ad_account_id, access_token, last_sync_at")
+  // Shared agency token
+  const { data: tokenRow } = await db
+    .from("meta_agency_tokens")
+    .select("access_token")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!tokenRow) return { campaigns: 0, insights: 0, audiences: 0 };
+
+  // Per-client ad account assignment
+  const { data: assignment } = await db
+    .from("meta_client_assignments")
+    .select("ad_account_id")
     .eq("tenant_id", tenantId)
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!conn) return { campaigns: 0, insights: 0, audiences: 0 };
+  if (!assignment) return { campaigns: 0, insights: 0, audiences: 0 };
 
-  const c = conn as {
-    id: string;
-    ad_account_id: string;
-    access_token: string;
-    last_sync_at: string | null;
-  };
+  const accessToken = tokenRow.access_token;
+  const adAccountId = assignment.ad_account_id;
 
   // Sync campaigns
   const campaignData = await graphGet<{ data: unknown[] }>(
-    `/act_${c.ad_account_id}/campaigns`,
+    `/act_${adAccountId}/campaigns`,
     {
       fields:
         "id,name,status,objective,budget_remaining,daily_budget,lifetime_budget,start_time,stop_time",
       limit: "100",
     },
-    c.access_token
+    accessToken
   );
 
   let campaigns = 0;
@@ -58,14 +65,14 @@ export async function syncMetaAds(tenantId: string): Promise<{
     await db.from("meta_campaigns").upsert(
       {
         tenant_id: tenantId,
-        connection_id: c.id,
+        connection_id: null,
         external_id: String(ca.id ?? ""),
         name: String(ca.name ?? ""),
         status: String(ca.status ?? ""),
         objective: String(ca.objective ?? ""),
         raw_data: ca as Json,
       },
-      { onConflict: "connection_id,external_id" }
+      { onConflict: "tenant_id,external_id" }
     );
     campaigns++;
   }
@@ -77,7 +84,7 @@ export async function syncMetaAds(tenantId: string): Promise<{
   const insightEnd = new Date().toISOString().split("T")[0];
 
   const insightData = await graphGet<{ data: unknown[] }>(
-    `/act_${c.ad_account_id}/insights`,
+    `/act_${adAccountId}/insights`,
     {
       fields:
         "campaign_id,impressions,reach,clicks,spend,actions,action_values,cpm,cpc,ctr",
@@ -86,7 +93,7 @@ export async function syncMetaAds(tenantId: string): Promise<{
       level: "campaign",
       limit: "500",
     },
-    c.access_token
+    accessToken
   );
 
   let insights = 0;
@@ -139,13 +146,13 @@ export async function syncMetaAds(tenantId: string): Promise<{
 
   // Sync audiences
   const audienceData = await graphGet<{ data: unknown[] }>(
-    `/act_${c.ad_account_id}/customaudiences`,
+    `/act_${adAccountId}/customaudiences`,
     {
       fields:
         "id,name,subtype,description,approximate_count_lower_bound",
       limit: "100",
     },
-    c.access_token
+    accessToken
   );
 
   let audiences = 0;
@@ -154,7 +161,7 @@ export async function syncMetaAds(tenantId: string): Promise<{
     await db.from("meta_audiences").upsert(
       {
         tenant_id: tenantId,
-        connection_id: c.id,
+        connection_id: null,
         external_id: String(a.id ?? ""),
         name: String(a.name ?? ""),
         type: "custom",
@@ -163,16 +170,16 @@ export async function syncMetaAds(tenantId: string): Promise<{
         approximate_count: Number(a.approximate_count_lower_bound ?? 0),
         raw_data: a as Json,
       },
-      { onConflict: "connection_id,external_id" }
+      { onConflict: "tenant_id,external_id" }
     );
     audiences++;
   }
 
-  // Update last_sync_at
+  // Update last_sync_at on client assignment
   await db
-    .from("meta_connections")
+    .from("meta_client_assignments")
     .update({ last_sync_at: new Date().toISOString() })
-    .eq("id", c.id);
+    .eq("tenant_id", tenantId);
 
   return { campaigns, insights, audiences };
 }

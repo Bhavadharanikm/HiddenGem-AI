@@ -1,39 +1,31 @@
-import { NextRequest } from "next/server";
-import { error, ok } from "@/lib/api/response";
+import { NextRequest, NextResponse } from "next/server";
 import { exchangeCode, getLongLivedToken } from "@/lib/meta/oauth";
 import { getServiceClient } from "@/lib/supabase/service";
 
 export async function GET(req: NextRequest) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.URL ?? "";
   const code = req.nextUrl.searchParams.get("code");
-  const state = req.nextUrl.searchParams.get("state");
 
-  if (!code || !state) return error("BAD_REQUEST", "Missing code or state");
-
-  let tenantId: string;
-  try {
-    tenantId = JSON.parse(Buffer.from(state, "base64url").toString()).tenantId;
-  } catch {
-    return error("BAD_REQUEST", "Invalid state");
+  if (!code) {
+    return NextResponse.redirect(`${siteUrl}/?meta_error=missing_code`);
   }
 
-  const { shortToken } = await exchangeCode(code).catch(() => ({ shortToken: null as unknown as string }));
-  if (!shortToken) return error("INTERNAL_ERROR", "Token exchange failed");
+  try {
+    const { shortToken } = await exchangeCode(code);
+    const { token, expiresAt } = await getLongLivedToken(shortToken);
 
-  const { token, expiresAt } = await getLongLivedToken(shortToken);
-
-  const db = getServiceClient();
-  const { error: dbErr } = await db.from("meta_connections").upsert(
-    {
-      tenant_id: tenantId,
-      ad_account_id: "pending",
+    const db = getServiceClient();
+    // Replace any existing agency token
+    await db.from("meta_agency_tokens").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await db.from("meta_agency_tokens").insert({
       access_token: token,
       token_expires_at: expiresAt.toISOString(),
-      scopes: ["ads_read", "ads_management"],
-      is_active: true,
-    },
-    { onConflict: "tenant_id,ad_account_id" }
-  );
+      scopes: ["ads_read", "ads_management", "pages_read_engagement", "business_management"],
+    });
+  } catch (err) {
+    console.error("[meta-ads/callback]", err);
+    return NextResponse.redirect(`${siteUrl}/?meta_error=auth_failed`);
+  }
 
-  if (dbErr) return error("INTERNAL_ERROR", dbErr.message);
-  return ok({ connected: true, token_expires_at: expiresAt.toISOString() });
+  return NextResponse.redirect(`${siteUrl}/?meta_connected=1`);
 }
