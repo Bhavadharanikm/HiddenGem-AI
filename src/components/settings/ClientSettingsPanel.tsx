@@ -269,6 +269,7 @@ function PmsTab({ clientId }: { clientId: string }) {
       const poll = async () => {
         attempts++;
         if (attempts > MAX_ATTEMPTS) {
+          await load();
           setSyncing(false);
           setSyncStalled(true);
           return;

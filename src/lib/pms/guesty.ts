@@ -7,8 +7,11 @@ import type {
 } from "./adapter";
 
 type GuestyCredentials = {
-  clientId: string;
-  clientSecret: string;
+  clientId?: string;
+  clientSecret?: string;
+  // also accept snake_case keys stored by the UI
+  client_id?: string;
+  client_secret?: string;
 };
 
 const BASE_URL = "https://open-api.guesty.com/v1";
@@ -27,8 +30,8 @@ export class GuestyAdapter implements PMSAdapter {
     }
     const body = new URLSearchParams({
       grant_type: "client_credentials",
-      client_id: this.credentials.clientId ?? "",
-      client_secret: this.credentials.clientSecret ?? "",
+      client_id: this.credentials.clientId ?? this.credentials.client_id ?? "",
+      client_secret: this.credentials.clientSecret ?? this.credentials.client_secret ?? "",
       scope: "open-api",
     });
 
