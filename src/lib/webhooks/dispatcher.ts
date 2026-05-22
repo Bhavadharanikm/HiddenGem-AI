@@ -31,7 +31,7 @@ export async function dispatchWebhook(
     tenant_id: tenantId,
     endpoint_id: ep.id,
     event_type: event,
-    payload,
+    payload: payload as unknown as import("@/types/database").Json,
     status: "pending" as const,
     next_retry_at: new Date().toISOString(),
   }));

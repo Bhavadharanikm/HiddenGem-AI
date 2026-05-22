@@ -62,7 +62,8 @@ export default function ChatInterface({ initialClients }: Props) {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [leftNavOpen, setLeftNavOpen] = useState(true);
-  const [historyOpen, setHistoryOpen] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const initialHistorySet = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<WorkspaceView>("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -117,7 +118,14 @@ export default function ChatInterface({ initialClients }: Props) {
       headers: { "X-Dashboard-Session": "1" },
     })
       .then((r) => r.json())
-      .then((j) => setConversations(j.conversations ?? []))
+      .then((j) => {
+        const convs: Conversation[] = j.conversations ?? [];
+        setConversations(convs);
+        if (!initialHistorySet.current) {
+          initialHistorySet.current = true;
+          if (convs.length > 0) setHistoryOpen(true);
+        }
+      })
       .catch(() => setConversations([]));
   }, [selectedClient]);
 

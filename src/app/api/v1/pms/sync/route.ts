@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
           if (properties.length > 0) {
             const propRows = properties.map((p) => ({
               tenant_id: tenantId, connection_id: conn.id, external_id: p.externalId,
-              name: p.name, address: p.address, bedrooms: p.bedrooms, bathrooms: p.bathrooms,
+              name: p.name, address: p.address as unknown as import("@/types/database").Json, bedrooms: p.bedrooms, bathrooms: p.bathrooms,
               amenities: p.amenities, base_price: p.basePrice, currency: p.currency,
             }));
             for (let i = 0; i < propRows.length; i += 100) {
