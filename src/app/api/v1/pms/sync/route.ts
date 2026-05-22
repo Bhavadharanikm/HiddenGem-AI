@@ -80,8 +80,9 @@ export async function POST(req: NextRequest) {
           }
           const { data: storedProps } = await db.from("pms_properties").select("id, external_id").eq("tenant_id", tenantId);
           const propIdMap: Record<string, string> = Object.fromEntries((storedProps ?? []).map((p) => [p.external_id, p.id]));
-          const since = conn.last_sync_at ?? new Date(Date.now() - 180 * 86400000).toISOString();
-          const bookings = await adapter.fetchBookings({ since });
+          const bookings = await adapter.fetchBookings(
+            conn.last_sync_at ? { since: conn.last_sync_at } : undefined
+          );
           if (bookings.length > 0) {
             const bookingRows = bookings.filter((b) => propIdMap[b.propertyExternalId]).map((b) => ({
               tenant_id: tenantId, property_id: propIdMap[b.propertyExternalId], external_id: b.externalId,

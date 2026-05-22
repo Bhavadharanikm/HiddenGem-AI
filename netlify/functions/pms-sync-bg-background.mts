@@ -77,10 +77,12 @@ export default async function handler(req: Request) {
       );
 
       // ── Bookings ───────────────────────────────────────────────────
-      // First sync: 6 months back. Subsequent syncs: delta from last_sync_at.
-      const since = conn.last_sync_at
-        ?? new Date(Date.now() - 180 * 86400000).toISOString();
-      const bookings = await adapter.fetchBookings({ since });
+      // First sync (last_sync_at = null): no date filter → Guesty returns all.
+      // Subsequent syncs: delta from last_sync_at (only recently updated records).
+      const bookings = await adapter.fetchBookings(
+        conn.last_sync_at ? { since: conn.last_sync_at } : undefined
+      );
+      console.log(`[pms-sync-bg] ${conn.provider} ${conn.id} — fetched ${bookings.length} bookings`);
 
       if (bookings.length > 0) {
         const bookingRows = bookings

@@ -76,7 +76,7 @@ export async function PATCH(
 
   const { error } = await db
     .from("pms_connections")
-    .update({ sync_status: "idle" })
+    .update({ sync_status: "idle", last_sync_at: null })
     .eq("tenant_id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
