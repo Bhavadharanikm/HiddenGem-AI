@@ -143,7 +143,11 @@ export class GuestyAdapter implements PMSAdapter {
   }
 
   async fetchBookings(params?: BookingQueryParams): Promise<PMSBooking[]> {
-    const query: Record<string, string> = {};
+    const query: Record<string, string> = {
+      // Without explicit fields, Guesty returns only minimal data (_id, dates, listingId).
+      // This tells Guesty to include status, money, guest count, and channel fields.
+      fields: "_id status checkInDateLocalized checkOutDateLocalized checkIn checkOut guestsCount listing listingId money source channel integration lastUpdatedAt",
+    };
 
     if (params?.since) {
       // Guesty v1 filter syntax — simple query params are ignored; must use filters[] array

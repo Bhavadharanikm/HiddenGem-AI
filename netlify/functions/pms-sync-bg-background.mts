@@ -96,6 +96,7 @@ export default async function handler(req: Request) {
             guests: b.guests,
             total_revenue: b.totalRevenue,
             platform: b.platform,
+            raw_data: b.rawData,
           }));
         for (let i = 0; i < bookingRows.length; i += 100) {
           await db
