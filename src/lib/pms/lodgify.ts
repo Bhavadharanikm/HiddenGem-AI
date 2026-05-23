@@ -77,7 +77,14 @@ export class LodgifyAdapter implements PMSAdapter {
 
   async fetchBookings(params?: BookingQueryParams): Promise<PMSBooking[]> {
     const query: Record<string, string> = {};
-    if (params?.since) query.updatedSince = params.since;
+    if (params?.since) {
+      query.updatedSince = params.since;
+    } else {
+      const from = params?.from ?? new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
+      const to   = params?.to   ?? new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0];
+      query.dateFrom = from;
+      query.dateTo   = to;
+    }
     const results = await this.getAll<unknown>("/v2/reservations", query);
     return results.map((r: unknown) => {
       const res = r as Record<string, unknown>;

@@ -79,14 +79,22 @@ export class Beds24Adapter implements PMSAdapter {
 
   async fetchBookings(params?: BookingQueryParams): Promise<PMSBooking[]> {
     const query: Record<string, string> = {};
-    if (params?.since) query.modifiedSince = params.since;
+    if (params?.since) {
+      query.modifiedSince = params.since;
+    } else {
+      const from = params?.from ?? new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
+      const to   = params?.to   ?? new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0];
+      query.startDate = from;
+      query.endDate   = to;
+    }
     const data = await this.get<{ data?: unknown[] } | unknown[]>("/bookings", query);
     const results = Array.isArray(data) ? data : (data as { data?: unknown[] }).data ?? [];
     return results.map((r: unknown) => {
       const res = r as Record<string, unknown>;
       const rawStatus = String(res.status ?? "");
-      const status = rawStatus === "0" ? "confirmed"
-        : rawStatus === "1" ? "confirmed"
+      // Beds24 status codes: 0 = new/unconfirmed, 1 = confirmed, 2 = cancelled/voided
+      const status = rawStatus === "1" ? "confirmed"
+        : rawStatus === "0" ? "inquiry"
         : rawStatus === "2" ? "cancelled"
         : rawStatus.toLowerCase();
       return {

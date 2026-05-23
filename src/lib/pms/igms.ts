@@ -2,6 +2,14 @@ import type { PMSAdapter, PMSProperty, PMSBooking, PMSReview, BookingQueryParams
 
 const BASE_URL = "https://api.igms.com/v1";
 
+const IGMS_STATUS_MAP: Record<string, string> = {
+  accepted: "confirmed", confirmed: "confirmed", booked: "confirmed",
+  checked_in: "confirmed", checked_out: "confirmed",
+  pending: "inquiry", inquiry: "inquiry", request: "inquiry",
+  cancelled: "cancelled", canceled: "cancelled", declined: "cancelled",
+  expired: "cancelled", blocked: "blocked", unavailable: "blocked",
+};
+
 export class IgmsAdapter implements PMSAdapter {
   readonly provider = "igms" as const;
   constructor(private credentials: { api_key: string }) {}
@@ -53,7 +61,14 @@ export class IgmsAdapter implements PMSAdapter {
 
   async fetchBookings(params?: BookingQueryParams): Promise<PMSBooking[]> {
     const query: Record<string, string> = {};
-    if (params?.since) query.updatedAfter = params.since;
+    if (params?.since) {
+      query.updatedAfter = params.since;
+    } else {
+      const from = params?.from ?? new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
+      const to   = params?.to   ?? new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0];
+      query.checkInFrom = from;
+      query.checkInTo   = to;
+    }
     const data = await this.get<{ data?: unknown[]; reservations?: unknown[] } | unknown[]>(
       "/reservations", query
     );
@@ -62,10 +77,11 @@ export class IgmsAdapter implements PMSAdapter {
         ?? (data as { reservations?: unknown[] }).reservations ?? [];
     return results.map((r: unknown) => {
       const res = r as Record<string, unknown>;
+      const rawStatus = String(res.status ?? "").toLowerCase();
       return {
         externalId: String(res.id ?? res.reservationId ?? ""),
         propertyExternalId: String(res.listingId ?? res.propertyId ?? ""),
-        status: String(res.status ?? "confirmed").toLowerCase(),
+        status: IGMS_STATUS_MAP[rawStatus] ?? rawStatus,
         checkIn: String(res.checkIn ?? res.arrivalDate ?? ""),
         checkOut: String(res.checkOut ?? res.departureDate ?? ""),
         guests: Number(res.guests ?? res.guestsCount ?? 0),

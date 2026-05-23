@@ -95,7 +95,7 @@ export async function executeGetPmsData(
         .from("performance_metrics")
         .select("metric_date, metric_type, metric_value")
         .eq("tenant_id", tenantId)
-        .in("metric_type", ["occupancy_rate", "adr", "total_revenue"])
+        .in("metric_type", ["occupancy_rate", "adr", "revpar", "total_revenue"])
         .order("metric_date", { ascending: false })
         .limit(150);
 
