@@ -66,6 +66,7 @@ export default function ChatInterface({ initialClients }: Props) {
   const initialHistorySet = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeView, setActiveView] = useState<WorkspaceView>("chat");
+  const [hasKnowledgeBase, setHasKnowledgeBase] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const refreshClients = useCallback(() => {
@@ -127,6 +128,21 @@ export default function ChatInterface({ initialClients }: Props) {
         }
       })
       .catch(() => setConversations([]));
+  }, [selectedClient]);
+
+  // Check if the selected client has any knowledge base documents
+  useEffect(() => {
+    if (!selectedClient) { setHasKnowledgeBase(false); return; }
+    fetch(`/api/v1/clients/${selectedClient.id}/knowledge`, {
+      headers: { "X-Dashboard-Session": "1" },
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        const hasKB = Array.isArray(j.docs) && j.docs.length > 0;
+        setHasKnowledgeBase(hasKB);
+        if (!hasKB) setActiveView((v) => v === "knowledge" ? "chat" : v);
+      })
+      .catch(() => setHasKnowledgeBase(false));
   }, [selectedClient]);
 
   const handleNewConversation = useCallback(() => {
@@ -375,6 +391,7 @@ export default function ChatInterface({ initialClients }: Props) {
           onSettingsOpen={() => setSettingsOpen(true)}
           activeView={activeView}
           onNavigate={setActiveView}
+          hasKnowledgeBase={hasKnowledgeBase}
           onFilterApply={(_month, _year) => { /* filter wired — dashboards will consume when live data is added */ }}
         />
       </div>
@@ -423,7 +440,7 @@ export default function ChatInterface({ initialClients }: Props) {
           ) : activeView === "email" ? (
             <EmailPerformanceDashboardView clientName={selectedClient?.name ?? ""} />
           ) : activeView === "knowledge" && selectedClient ? (
-            <KnowledgeBaseView clientId={selectedClient.id} clientName={selectedClient.name} />
+            <KnowledgeBaseView clientId={selectedClient.id} clientName={selectedClient.name} onDocsChange={(count) => setHasKnowledgeBase(count > 0)} />
           ) : messages.length === 0 && streamingMessage === null && !isLoading ? (
             <EmptyState clientName={selectedClient?.name} onSuggestion={handleSend} />
           ) : (

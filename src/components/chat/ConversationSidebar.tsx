@@ -14,6 +14,7 @@ import {
   Send,
   MessageCircle,
   Bug,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ClientSwitcher from "./ClientSwitcher";
@@ -26,6 +27,7 @@ type Props = {
   onSettingsOpen: () => void;
   activeView: "chat" | "knowledge" | "performance" | "email";
   onNavigate: (view: "chat" | "knowledge" | "performance" | "email") => void;
+  hasKnowledgeBase?: boolean;
   onFilterApply?: (month: number, year: number) => void;
 };
 
@@ -44,6 +46,7 @@ export default function ConversationSidebar({
   onSettingsOpen,
   activeView,
   onNavigate,
+  hasKnowledgeBase = false,
   onFilterApply,
 }: Props) {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -119,7 +122,7 @@ export default function ConversationSidebar({
           Modules
         </p>
         <div className="space-y-1">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter((item) => item.view !== "knowledge" || hasKnowledgeBase).map((item) => {
             const isInteractive = "view" in item;
             const isActive = isInteractive && activeView === item.view;
             const Icon = item.icon;

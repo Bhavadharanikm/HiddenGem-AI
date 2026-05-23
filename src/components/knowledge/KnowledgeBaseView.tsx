@@ -22,7 +22,7 @@ function StatusBadge({ status }: { status: string }) {
   return <span className="inline-flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-full bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border border-[rgba(41,151,255,0.2)]"><Loader2 size={10} className="animate-spin" />{status}</span>;
 }
 
-export default function KnowledgeBaseView({ clientId, clientName }: { clientId: string; clientName: string }) {
+export default function KnowledgeBaseView({ clientId, clientName, onDocsChange }: { clientId: string; clientName: string; onDocsChange?: (count: number) => void }) {
   const [docs, setDocs] = useState<KDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -33,13 +33,15 @@ export default function KnowledgeBaseView({ clientId, clientName }: { clientId: 
       const r = await fetch(`/api/v1/clients/${clientId}/knowledge`, { headers: { "X-Dashboard-Session": "1" } });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error);
-      setDocs(j.docs ?? []);
+      const loaded: KDoc[] = j.docs ?? [];
+      setDocs(loaded);
+      onDocsChange?.(loaded.length);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
     }
-  }, [clientId]);
+  }, [clientId, onDocsChange]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -50,10 +52,14 @@ export default function KnowledgeBaseView({ clientId, clientName }: { clientId: 
     const t = setTimeout(async () => {
       const r = await fetch(`/api/v1/clients/${clientId}/knowledge`, { headers: { "X-Dashboard-Session": "1" } });
       const j = await r.json();
-      if (r.ok) setDocs(j.docs ?? []);
+      if (r.ok) {
+        const polled: KDoc[] = j.docs ?? [];
+        setDocs(polled);
+        onDocsChange?.(polled.length);
+      }
     }, 2500);
     return () => clearTimeout(t);
-  }, [docs, clientId]);
+  }, [docs, clientId, onDocsChange]);
 
   return (
     <div className="flex-1 overflow-y-auto">
