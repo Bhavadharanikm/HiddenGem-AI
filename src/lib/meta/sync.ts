@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/supabase/service";
+import { decryptToken } from "@/lib/crypto/credentials";
 import type { Json } from "@/types/database";
 
 const API_VERSION = "v19.0";
@@ -45,7 +46,7 @@ export async function syncMetaAds(tenantId: string): Promise<{
 
   if (!assignment) return { campaigns: 0, insights: 0, audiences: 0 };
 
-  const accessToken = tokenRow.access_token;
+  const accessToken = await decryptToken(tokenRow.access_token);
   const adAccountId = assignment.ad_account_id;
 
   // Sync campaigns

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Check, Loader2, ToggleLeft, ToggleRight, FileText, Trash2, X, Plus, RefreshCw } from "lucide-react";
+import { Check, Loader2, ToggleLeft, ToggleRight, FileText, Trash2, X, Plus, RefreshCw, Key, Eye, EyeOff, Zap, LogIn, Infinity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ClientRecord = {
@@ -9,7 +9,7 @@ export type ClientRecord = {
   system_prompt: string | null; is_active: boolean; created_at: string;
 };
 
-type Props = { client: ClientRecord; clientIndex: number; onUpdate: (updated: ClientRecord) => void };
+type Props = { client: ClientRecord; clientIndex: number; onUpdate: (updated: ClientRecord) => void; onDelete?: (id: string) => void };
 
 const SWATCH_COLORS = [
   "bg-[rgba(41,151,255,0.12)] text-[#2997ff] border-[rgba(41,151,255,0.2)]",
@@ -30,20 +30,20 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "performance", label: "Performance" }, { id: "audiences", label: "Audiences" },
 ];
 
-const field = "w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all";
-const lbl   = "text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 block mb-1.5";
-const btn   = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)]";
+const field = "w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all";
+const lbl   = "text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-600 block mb-1.5";
+const btn   = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2";
 
 type KDoc = { id: string; name: string; google_doc_url: string; mime_type: string | null; status: "pending"|"processing"|"ready"|"error"; error_msg?: string | null; last_modified_at: string | null; created_at: string };
 type PmsCon = { id: string; provider: string; last_sync_at: string | null; sync_status: string; is_active: boolean };
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "ready")  return <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">ready</span>;
-  if (status === "error")  return <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">error</span>;
-  return <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border border-[rgba(41,151,255,0.2)]"><Loader2 size={10} className="animate-spin" />{status}</span>;
+  if (status === "ready")  return <span className="text-[12px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">ready</span>;
+  if (status === "error")  return <span className="text-[12px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">error</span>;
+  return <span className="inline-flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-full bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border border-[rgba(41,151,255,0.2)]"><Loader2 size={10} className="animate-spin" />{status}</span>;
 }
 
-function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: ClientRecord) => void }) {
+function GeneralTab({ client, onUpdate, onDelete }: { client: ClientRecord; onUpdate: (c: ClientRecord) => void; onDelete?: (id: string) => void }) {
   const [name, setName] = useState(client.name);
   const [slug, setSlug] = useState(client.slug);
   const [sp, setSp]     = useState(client.system_prompt ?? "");
@@ -51,6 +51,10 @@ function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: 
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState<string | null>(null);
   const [ok, setOk]         = useState(false);
+  const [confirmDelete, setConfirmDelete]     = useState(false);
+  const [deleting, setDeleting]               = useState(false);
+  const [deleteErr, setDeleteErr]             = useState<string | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
 
   useEffect(() => { setName(client.name); setSlug(client.slug); setSp(client.system_prompt ?? ""); setActive(client.is_active); }, [client]);
 
@@ -68,11 +72,20 @@ function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: 
     finally { setSaving(false); }
   }
 
+  async function handleDelete() {
+    setDeleting(true); setDeleteErr(null);
+    try {
+      const res = await fetch(`/api/v1/clients/${client.id}`, { method: "DELETE", headers: { "X-Dashboard-Session": "1" } });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error ?? "Delete failed"); }
+      onDelete?.(client.id);
+    } catch (e) { setDeleteErr(e instanceof Error ? e.message : "Delete failed"); setDeleting(false); }
+  }
+
   return (
     <div className="space-y-4">
       <div><label className={lbl}>Client name</label><input value={name} onChange={(e) => { setName(e.target.value); setSlug(toSlug(e.target.value)); }} className={field} /></div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => setActive((v) => !v)} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] rounded">
+        <button type="button" aria-label={active ? "Deactivate client" : "Activate client"} onClick={() => setActive((v) => !v)} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 rounded">
           {active ? <ToggleRight size={22} className="text-[var(--brand)]" /> : <ToggleLeft size={22} className="text-slate-300" />}
         </button>
         <span className="text-[13px] text-slate-700">Active</span>
@@ -84,7 +97,53 @@ function GeneralTab({ client, onUpdate }: { client: ClientRecord; onUpdate: (c: 
           {saving ? "Saving…" : ok ? "Saved!" : "Save changes"}
         </button>
         {isDirty && !saving && (
-          <span className="text-[11px] text-amber-500 font-medium">Unsaved changes</span>
+          <span className="text-[12px] text-amber-500 font-medium">Unsaved changes</span>
+        )}
+      </div>
+
+      {/* Danger zone */}
+      <div className="pt-4 mt-2 border-t border-[var(--border)]">
+        <p className="text-[12px] font-semibold text-slate-500 uppercase tracking-[0.1em] mb-3">Danger zone</p>
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-red-200 bg-red-50 text-[12px] font-medium text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
+          >
+            <Trash2 size={13} strokeWidth={2} /> Delete client
+          </button>
+        ) : (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 space-y-3">
+            <p className="text-[13px] font-semibold text-red-700">Delete "{client.name}"?</p>
+            <p className="text-[12px] text-red-600 leading-relaxed">This permanently deletes all conversations, PMS data, knowledge docs, and connections. This cannot be undone.</p>
+            <div className="space-y-1.5">
+              <label className="text-[12px] text-red-600">Type <strong>Delete {client.name}</strong> to confirm:</label>
+              <input
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={`Delete ${client.name}`}
+                className="w-full rounded-xl border border-red-200 bg-white px-3 py-2 text-[13px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 transition-all"
+                disabled={deleting}
+              />
+            </div>
+            {deleteErr && <p className="text-[12px] text-red-700 font-medium">{deleteErr}</p>}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDelete}
+                disabled={deleting || deleteConfirmName !== `Delete ${client.name}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+              >
+                {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} strokeWidth={2.5} />}
+                {deleting ? "Deleting…" : "Yes, delete permanently"}
+              </button>
+              <button
+                onClick={() => { setConfirmDelete(false); setDeleteErr(null); setDeleteConfirmName(""); }}
+                disabled={deleting}
+                className="px-3 py-1.5 rounded-lg border border-red-200 text-[12px] text-red-600 hover:bg-red-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -153,17 +212,17 @@ function KnowledgeTab({ clientId }: { clientId: string }) {
       {loading ? <div className="flex justify-center py-10"><Loader2 size={18} className="text-[var(--brand)] animate-spin" /></div>
        : err ? <p className="text-[12px] text-red-500">{err}</p>
        : <div className="space-y-2">
-           {docs.length === 0 && <p className="text-[12px] text-slate-400 py-3">No documents yet.</p>}
+           {docs.length === 0 && <p className="text-[12px] text-slate-500 py-3">No documents yet.</p>}
            {docs.map((doc) => (
              <div key={doc.id} className="rounded-xl bg-[rgba(41,151,255,0.04)] border border-[var(--border)]">
                <div className="flex items-center gap-3 px-3 py-2.5">
                  <FileText size={14} className="text-[var(--brand)] flex-shrink-0" />
-                 <div className="flex-1 min-w-0"><p className="text-[12px] text-slate-800 truncate font-medium">{doc.name}</p>{doc.last_modified_at && <p className="text-[11px] text-slate-400 mt-0.5">Modified {formatDate(doc.last_modified_at)}</p>}</div>
+                 <div className="flex-1 min-w-0"><p className="text-[12px] text-slate-800 truncate font-medium">{doc.name}</p>{doc.last_modified_at && <p className="text-[12px] text-slate-500 mt-0.5">Modified {formatDate(doc.last_modified_at)}</p>}</div>
                  <StatusBadge status={doc.status} />
-                 <button onClick={() => del(doc.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+                 <button onClick={() => del(doc.id)} aria-label={`Delete ${doc.name}`} className="p-1.5 rounded-lg text-slate-500 hover:text-red-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"><Trash2 size={13} /></button>
                </div>
                {doc.status === "error" && doc.error_msg && (
-                 <p className="px-3 pb-2.5 text-[11px] text-red-500 leading-relaxed">{doc.error_msg}</p>
+                 <p className="px-3 pb-2.5 text-[12px] text-red-500 leading-relaxed">{doc.error_msg}</p>
                )}
              </div>
            ))}
@@ -263,9 +322,9 @@ function PmsTab({ clientId }: { clientId: string }) {
       const r = await fetch("/api/v1/pms/sync", { method: "POST", headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" }, body: JSON.stringify({ tenant_id: clientId }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error?.message ?? "Sync failed");
-      // Poll until sync_status leaves "running", timeout after 2 minutes
+      // Poll until sync_status leaves "running", timeout after 12 minutes (background function can run up to 15 min)
       let attempts = 0;
-      const MAX_ATTEMPTS = 40; // 40 × 3s = 2 minutes
+      const MAX_ATTEMPTS = 240; // 240 × 3s = 12 minutes
       const poll = async () => {
         attempts++;
         if (attempts > MAX_ATTEMPTS) {
@@ -310,31 +369,31 @@ function PmsTab({ clientId }: { clientId: string }) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-[12px] font-semibold text-[var(--brand)] px-2 py-0.5 rounded-lg bg-[rgba(41,151,255,0.1)] border border-[rgba(41,151,255,0.2)]">{provLabel}</span>
-                {con.is_active ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">active</span> : <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">inactive</span>}
+                {con.is_active ? <span className="text-[12px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">active</span> : <span className="text-[12px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">inactive</span>}
               </div>
-              <span className="text-[11px] text-slate-400">{con.sync_status === "running" || syncing ? <span className="flex items-center gap-1 text-[var(--brand)]"><Loader2 size={10} className="animate-spin" />syncing</span> : con.sync_status === "error" ? <span className="text-red-500">sync error</span> : "idle"}</span>
+              <span className="text-[12px] text-slate-500">{con.sync_status === "running" || syncing ? <span className="flex items-center gap-1 text-[var(--brand)]"><Loader2 size={10} className="animate-spin" />syncing</span> : con.sync_status === "error" ? <span className="text-red-500">sync error</span> : "idle"}</span>
             </div>
-            <p className="text-[12px] text-slate-500">Last synced: <span className="text-slate-700">{con.last_sync_at ? formatDateTime(con.last_sync_at) : "Never"}</span></p>
+            <p className="text-[12px] text-slate-600">Last synced: <span className="text-slate-700">{con.last_sync_at ? formatDateTime(con.last_sync_at) : "Never"}</span></p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={syncNow} disabled={syncing} className={cn(btn, "text-[12px]")}>
               {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} strokeWidth={2.5} />}
               {syncing ? "Syncing in background…" : "Sync now"}
             </button>
-            <button onClick={() => setForm(true)} className="text-[12px] text-slate-400 hover:text-slate-600 underline underline-offset-2 transition-colors">Update credentials</button>
+            <button onClick={() => setForm(true)} className="text-[12px] text-slate-500 hover:text-slate-600 underline underline-offset-2 transition-colors">Update credentials</button>
           </div>
           {syncOk && <p className="text-[12px] text-[#30d158] font-medium">Sync completed successfully.</p>}
           {syncErr && <p className="text-[12px] text-red-500">{syncErr}</p>}
           {syncStalled && (
             <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 space-y-1.5">
-              <p className="text-[12px] text-amber-700 font-medium">Sync is taking longer than expected.</p>
+              <p className="text-[12px] text-amber-700 font-medium">Sync is running in the background — this can take several minutes for large accounts.</p>
               <button onClick={resetSync} className="text-[12px] text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Reset sync status</button>
             </div>
           )}
         </div>
        ) : (
         <div className="space-y-4">
-          {con && <button onClick={() => setForm(false)} className="flex items-center gap-1.5 text-[12px] text-slate-400 hover:text-slate-600 transition-colors"><X size={12} />Cancel</button>}
+          {con && <button onClick={() => setForm(false)} className="flex items-center gap-1.5 text-[12px] text-slate-500 hover:text-slate-600 transition-colors"><X size={12} />Cancel</button>}
           <div><label className={lbl}>Provider</label><select value={prov} onChange={(e) => { setProv(e.target.value as PmsProvider); setCreds({}); }} className={cn(field, "appearance-none cursor-pointer")}>{PMS_PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></div>
           {credFields(prov).map((f) => (<div key={f.key}><label className={lbl}>{f.label}</label><input type={f.type ?? "text"} value={creds[f.key] ?? ""} onChange={(e) => setCreds((prev) => ({ ...prev, [f.key]: e.target.value }))} placeholder={`Enter ${f.label}`} className={field} /></div>))}
           {saveErr && <p className="text-[12px] text-red-500">{saveErr}</p>}
@@ -362,6 +421,10 @@ function MetaTab({ clientId }: { clientId: string }) {
   const [syncing, setSyncing]             = useState(false);
   const [syncOk, setSyncOk]               = useState(false);
   const [err, setErr]                     = useState<string | null>(null);
+  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [systemToken, setSystemToken]       = useState("");
+  const [savingToken, setSavingToken]       = useState(false);
+  const [showPassword, setShowPassword]     = useState(false);
 
   const loadAll = useCallback(async () => {
     setStatusLoading(true); setErr(null);
@@ -390,6 +453,24 @@ function MetaTab({ clientId }: { clientId: string }) {
       setErr(e instanceof Error ? e.message : "Failed to connect");
       setConnecting(false);
     }
+  }
+
+  async function saveSystemToken() {
+    if (!systemToken.trim()) return;
+    setSavingToken(true); setErr(null);
+    try {
+      const r = await fetch("/api/v1/meta-ads/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" },
+        body: JSON.stringify({ token: systemToken.trim() }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error?.message ?? "Invalid token");
+      setSystemToken("");
+      setShowTokenInput(false);
+      await loadAll();
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed to save token"); }
+    finally { setSavingToken(false); }
   }
 
   async function assign() {
@@ -426,57 +507,230 @@ function MetaTab({ clientId }: { clientId: string }) {
     finally { setSyncing(false); }
   }
 
+  const isSystemToken = status.connected && !status.token_expires_at;
+
   return (
     <div className="space-y-5">
       <div>
         <h3 className="text-[14px] font-semibold text-slate-900">Meta Advertising Account</h3>
-        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">One agency Meta account manages all clients. Connect once, then assign each client to their ad account.</p>
+        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
+          One agency-level connection manages all clients. Connect once, then assign each client to their ad account.
+        </p>
       </div>
 
       {statusLoading ? (
         <div className="flex justify-center py-10"><Loader2 size={18} className="text-[var(--brand)] animate-spin" /></div>
       ) : (
         <>
-          {/* Agency connection status */}
-          <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] font-semibold text-slate-600">Agency Connection</span>
-              {status.connected
-                ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">connected</span>
-                : <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200">not connected</span>}
+          {/* ── Connected status banner ───────────────────────────── */}
+          {status.connected && !showTokenInput && (
+            <div className={cn(
+              "rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center gap-3",
+              isSystemToken
+                ? "bg-[rgba(48,209,88,0.06)] border-[rgba(48,209,88,0.22)]"
+                : "bg-[rgba(41,151,255,0.05)] border-[rgba(41,151,255,0.2)]"
+            )}>
+              <div className={cn(
+                "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0",
+                isSystemToken ? "bg-[rgba(48,209,88,0.15)]" : "bg-[rgba(41,151,255,0.12)]"
+              )}>
+                {isSystemToken
+                  ? <Infinity size={16} className="text-[#30d158]" strokeWidth={2} />
+                  : <LogIn size={16} className="text-[var(--brand)]" strokeWidth={2} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[12px] font-semibold text-slate-800">
+                    {isSystemToken ? "System User Token" : "Facebook OAuth"}
+                  </span>
+                  <span className={cn(
+                    "text-[12px] font-semibold px-2 py-0.5 rounded-full border",
+                    isSystemToken
+                      ? "bg-[rgba(48,209,88,0.12)] text-[#30d158] border-[rgba(48,209,88,0.2)]"
+                      : "bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border-[rgba(41,151,255,0.2)]"
+                  )}>connected</span>
+                </div>
+                <p className="text-[12px] text-slate-500 mt-0.5">
+                  {isSystemToken
+                    ? "Permanent · never expires · covers all assigned ad accounts"
+                    : `Expires ${formatDate(status.token_expires_at ?? null) ?? "unknown"}`}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTokenInput(true)}
+                className="text-[12px] text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap flex-shrink-0 underline underline-offset-2"
+              >
+                Change
+              </button>
             </div>
-            {status.connected && status.token_expires_at && (
-              <p className="text-[11px] text-slate-400">Token expires: {formatDate(status.token_expires_at)}</p>
-            )}
-            <button onClick={connect} disabled={connecting} className={cn(btn, "text-[12px]")}>
-              {connecting ? <Loader2 size={12} className="animate-spin" /> : null}
-              {connecting ? "Redirecting…" : status.connected ? "Reconnect Meta Account" : "Connect Meta Account"}
-            </button>
-          </div>
+          )}
 
-          {/* Ad account assignment (only shown when agency is connected) */}
-          {status.connected && (
+          {/* ── Connection method picker (not connected, or changing) ── */}
+          {(!status.connected || showTokenInput) && (
+            <div className="space-y-3">
+              {showTokenInput && status.connected && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-slate-700">Switch connection method</span>
+                  <button
+                    onClick={() => { setShowTokenInput(false); setSystemToken(""); setErr(null); }}
+                    className="flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-600 transition-colors"
+                  >
+                    <X size={12} /> Cancel
+                  </button>
+                </div>
+              )}
+
+              {/* Two method cards */}
+              {!showTokenInput && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* OAuth card */}
+                  <button
+                    onClick={connect}
+                    disabled={connecting}
+                    className="group text-left w-full bg-white border border-[var(--border)] hover:border-[rgba(41,151,255,0.4)] hover:shadow-[0_0_0_3px_rgba(41,151,255,0.08)] rounded-2xl p-4 transition-all disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[rgba(41,151,255,0.1)] flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-[rgba(41,151,255,0.16)] transition-colors">
+                        {connecting ? <Loader2 size={16} className="text-[var(--brand)] animate-spin" /> : <LogIn size={16} className="text-[var(--brand)]" strokeWidth={2} />}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-slate-800 leading-tight">
+                          {connecting ? "Redirecting…" : "Facebook Login"}
+                        </p>
+                        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
+                          OAuth flow · re-auth every 60 days
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* System token card */}
+                  <button
+                    onClick={() => setShowTokenInput(true)}
+                    className="group text-left w-full bg-white border-2 border-[rgba(41,151,255,0.25)] hover:border-[var(--brand)] hover:shadow-[0_0_0_3px_rgba(41,151,255,0.1)] rounded-2xl p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 relative overflow-hidden"
+                  >
+                    <div className="absolute top-2.5 right-2.5">
+                      <span className="text-[12px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-[var(--brand)] text-white">
+                        Recommended
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[rgba(41,151,255,0.12)] flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-[rgba(41,151,255,0.2)] transition-colors">
+                        <Key size={16} className="text-[var(--brand)]" strokeWidth={2} />
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-slate-800 leading-tight">System User Token</p>
+                        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
+                          Permanent · one token · all accounts
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* Token paste form */}
+              {showTokenInput && (
+                <div className="bg-white border-2 border-[rgba(41,151,255,0.25)] rounded-2xl p-4 space-y-4 shadow-[0_4px_20px_rgba(41,151,255,0.08)]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[rgba(41,151,255,0.1)] flex items-center justify-center flex-shrink-0">
+                      <Key size={16} className="text-[var(--brand)]" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-semibold text-slate-800">System User Token</p>
+                      <p className="text-[12px] text-slate-500">Permanent · covers all assigned ad accounts</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-[rgba(41,151,255,0.04)] border border-[rgba(41,151,255,0.14)] rounded-xl px-3 py-2.5 space-y-1">
+                    <p className="text-[12px] text-slate-600 leading-relaxed">
+                      Generate this token in <strong className="text-slate-700">Meta Business Manager → System Users → Generate Token</strong>. Assign the system user to each client's ad account first.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className={lbl}>Access token</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={systemToken}
+                        onChange={(e) => setSystemToken(e.target.value)}
+                        placeholder="EAABwzL..."
+                        className={cn(field, "pr-10 font-mono text-[12px]")}
+                        autoComplete="off"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? "Hide token" : "Show token"}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      onClick={saveSystemToken}
+                      disabled={savingToken || !systemToken.trim()}
+                      className={cn(btn, "w-full sm:w-auto justify-center")}
+                    >
+                      {savingToken ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.5} />}
+                      {savingToken ? "Validating…" : "Save token"}
+                    </button>
+                    {!status.connected && (
+                      <button
+                        onClick={connect}
+                        disabled={connecting}
+                        className="flex items-center justify-center gap-1.5 text-[12px] font-semibold px-4 py-2 rounded-xl border border-[var(--border)] text-slate-600 hover:border-[rgba(41,151,255,0.3)] hover:text-slate-800 transition-all w-full sm:w-auto disabled:opacity-50"
+                      >
+                        {connecting ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={12} strokeWidth={2} />}
+                        {connecting ? "Redirecting…" : "Use Facebook Login instead"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Ad account assignment ─────────────────────────────── */}
+          {status.connected && !showTokenInput && (
             <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
-              <span className="text-[12px] font-semibold text-slate-600">Client Ad Account</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-semibold text-slate-700">Client Ad Account</span>
+                {assignment && (
+                  <button
+                    onClick={() => setAssignment(null)}
+                    className="text-[12px] text-slate-500 hover:text-slate-600 transition-colors underline underline-offset-2"
+                  >
+                    Change
+                  </button>
+                )}
+              </div>
+
               {assignment ? (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[12px] font-semibold text-[var(--brand)] px-2 py-0.5 rounded-lg bg-[rgba(41,151,255,0.1)] border border-[rgba(41,151,255,0.2)]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[12px] font-semibold text-[var(--brand)] px-2.5 py-1 rounded-lg bg-[rgba(41,151,255,0.08)] border border-[rgba(41,151,255,0.2)]">
                       {assignment.account_name ?? `act_${assignment.ad_account_id}`}
                     </span>
-                    <span className="text-[11px] text-slate-400">act_{assignment.ad_account_id}</span>
+                    <span className="text-[12px] text-slate-500 font-mono">act_{assignment.ad_account_id}</span>
                   </div>
                   {assignment.last_sync_at && (
-                    <p className="text-[12px] text-slate-500">Last synced: <span className="text-slate-700">{formatDateTime(assignment.last_sync_at)}</span></p>
+                    <p className="text-[12px] text-slate-500">Last synced: {formatDateTime(assignment.last_sync_at)}</p>
                   )}
-                  <div className="flex items-center gap-3">
-                    <button onClick={syncNow} disabled={syncing} className={cn(btn, "text-[12px]")}>
-                      {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} strokeWidth={2.5} />}
-                      {syncing ? "Syncing…" : "Sync now"}
-                    </button>
-                    <button onClick={() => setAssignment(null)} className="text-[12px] text-slate-400 hover:text-slate-600 underline underline-offset-2 transition-colors">Change account</button>
-                  </div>
-                  {syncOk && <p className="text-[12px] text-[#30d158] font-medium">Sync completed successfully.</p>}
+                  <button onClick={syncNow} disabled={syncing} className={cn(btn, "w-full sm:w-auto justify-center sm:justify-start")}>
+                    {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} strokeWidth={2.5} />}
+                    {syncing ? "Syncing…" : "Sync now"}
+                  </button>
+                  {syncOk && (
+                    <div className="flex items-center gap-1.5 text-[12px] text-[#30d158] font-medium">
+                      <Check size={13} strokeWidth={2.5} /> Sync completed successfully.
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -493,20 +747,29 @@ function MetaTab({ clientId }: { clientId: string }) {
                           <option key={a.id} value={a.id}>{a.name} (act_{a.id})</option>
                         ))}
                       </select>
-                      <button onClick={assign} disabled={assigning || !selectedId} className={cn(btn, "text-[12px]")}>
+                      <button onClick={assign} disabled={assigning || !selectedId} className={cn(btn, "w-full sm:w-auto justify-center sm:justify-start")}>
                         {assigning ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.5} />}
                         {assigning ? "Assigning…" : "Assign account"}
                       </button>
                     </>
                   ) : (
-                    <p className="text-[12px] text-slate-500">No ad accounts found. Make sure the Meta token has <code className="text-[11px] bg-slate-100 px-1 rounded">ads_read</code> permission.</p>
+                    <div className="rounded-xl bg-slate-50 border border-[var(--border)] px-3 py-3">
+                      <p className="text-[12px] text-slate-500 leading-relaxed">
+                        No ad accounts found. Make sure the system user has been assigned ad accounts in Meta Business Manager, then reconnect.
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
             </div>
           )}
 
-          {err && <p className="text-[12px] text-red-500">{err}</p>}
+          {err && (
+            <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-3 py-2.5">
+              <X size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[12px] text-red-600">{err}</p>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -519,10 +782,10 @@ function PerformanceTab() {
       <div><h3 className="text-[14px] font-semibold text-slate-900">Performance Data</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Metrics are automatically calculated from connected PMS and Meta Ads data.</p></div>
       <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
         {[["Occupancy rate", "from PMS bookings"], ["Average daily rate (ADR)", "from PMS revenue"], ["RevPAR", "calculated from occupancy × ADR"], ["ROAS", "from Meta Ads spend vs revenue"], ["CTR & CPM", "from Meta Ads insights"]].map(([l, d]) => (
-          <div key={l} className="flex items-start gap-2.5"><Check size={14} className="text-[#30d158] flex-shrink-0 mt-0.5" strokeWidth={2.5} /><div><span className="text-[12px] text-slate-800 font-medium">{l}</span><span className="text-[12px] text-slate-400"> — {d}</span></div></div>
+          <div key={l} className="flex items-start gap-2.5"><Check size={14} className="text-[#30d158] flex-shrink-0 mt-0.5" strokeWidth={2.5} /><div><span className="text-[12px] text-slate-800 font-medium">{l}</span><span className="text-[12px] text-slate-500"> — {d}</span></div></div>
         ))}
       </div>
-      <p className="text-[12px] text-slate-400 leading-relaxed">Data refreshes every 2–4 hours once PMS and Meta Ads are connected.</p>
+      <p className="text-[12px] text-slate-500 leading-relaxed">Data refreshes every 2–4 hours once PMS and Meta Ads are connected.</p>
     </div>
   );
 }
@@ -533,15 +796,15 @@ function AudiencesTab() {
       <div><h3 className="text-[14px] font-semibold text-slate-900">Audience Assets & Campaign History</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Synced from your connected Meta Ads account.</p></div>
       {[["Custom Audiences", "Once connected, custom, lookalike, and saved audiences will appear here."], ["Campaign History", "Campaign history is imported from Meta Ads. The AI uses this to analyse past performance."]].map(([t, b]) => (
         <div key={t}>
-          <h4 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">{t}</h4>
-          <div className="bg-white border border-[var(--border)] rounded-2xl p-4 shadow-[0_4px_16px_rgba(15,23,42,0.04)]"><p className="text-[12px] text-slate-500 leading-relaxed">{b}</p><p className="text-[11px] text-slate-400 mt-2">Connect Meta Ads to enable this.</p></div>
+          <h4 className="text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-600 mb-2">{t}</h4>
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-4 shadow-[0_4px_16px_rgba(15,23,42,0.04)]"><p className="text-[12px] text-slate-500 leading-relaxed">{b}</p><p className="text-[12px] text-slate-500 mt-2">Connect Meta Ads to enable this.</p></div>
         </div>
       ))}
     </div>
   );
 }
 
-export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: Props) {
+export default function ClientSettingsPanel({ client, clientIndex, onUpdate, onDelete }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("general");
   const swatch = SWATCH_COLORS[clientIndex % SWATCH_COLORS.length];
 
@@ -552,7 +815,7 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: P
         <div className="flex-1 min-w-0">
           <p className="text-[16px] font-semibold text-slate-900 truncate leading-tight">{client.name}</p>
         </div>
-        <span className={cn("text-[11px] px-2.5 py-0.5 rounded-full border flex-shrink-0 font-medium", client.is_active ? "bg-[rgba(48,209,88,0.1)] text-[#30d158] border-[rgba(48,209,88,0.2)]" : "bg-slate-100 text-slate-400 border-slate-200")}>
+        <span className={cn("text-[12px] px-2.5 py-0.5 rounded-full border flex-shrink-0 font-medium", client.is_active ? "bg-[rgba(48,209,88,0.1)] text-[#30d158] border-[rgba(48,209,88,0.2)]" : "bg-slate-100 text-slate-500 border-slate-200")}>
           {client.is_active ? "active" : "inactive"}
         </span>
       </div>
@@ -560,7 +823,7 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: P
       <div className="flex items-center border-b border-[var(--border)] mb-5 flex-shrink-0 overflow-x-auto">
         {TABS.map((tab) => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={cn("text-[12px] px-3 py-2.5 whitespace-nowrap border-b-2 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-inset",
+            className={cn("text-[12px] px-3 py-2.5 whitespace-nowrap border-b-2 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-inset",
               activeTab === tab.id ? "text-[var(--brand)] border-[var(--brand)]" : "text-slate-500 hover:text-slate-800 border-transparent")}>
             {tab.label}
           </button>
@@ -568,7 +831,7 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate }: P
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {activeTab === "general"     && <GeneralTab client={client} onUpdate={onUpdate} />}
+        {activeTab === "general"     && <GeneralTab client={client} onUpdate={onUpdate} onDelete={onDelete} />}
         {activeTab === "knowledge"   && <KnowledgeTab clientId={client.id} />}
         {activeTab === "pms"         && <PmsTab clientId={client.id} />}
         {activeTab === "meta"        && <MetaTab clientId={client.id} />}

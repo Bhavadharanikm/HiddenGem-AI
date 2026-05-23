@@ -9,48 +9,173 @@ import type {
 type GuestyCredentials = {
   clientId?: string;
   clientSecret?: string;
-  // also accept snake_case keys stored by the UI
   client_id?: string;
   client_secret?: string;
 };
 
-const BASE_URL = "https://open-api.guesty.com/v1";
-const AUTH_URL = "https://open-api.guesty.com/oauth2/token";
+const HOSTS = [
+  { auth: "https://open-api.guesty.com/oauth2/token", base: "https://open-api.guesty.com/v1", scope: "open-api" },
+  { auth: "https://booking.guesty.com/oauth2/token",  base: "https://booking.guesty.com/v1",  scope: null },
+];
+
+const STATUS_MAP: Record<string, string> = {
+  inquiry:     "inquiry",
+  pending:     "inquiry",
+  reserved:    "confirmed",
+  confirmed:   "confirmed",
+  checked_in:  "confirmed",
+  checked_out: "confirmed",
+  canceled:    "cancelled",
+  cancelled:   "cancelled",
+  declined:    "cancelled",
+  expired:     "cancelled",
+  blocked:     "blocked",
+};
+
+// Fields we request from /listings — Guesty omits most without explicit fields param
+const LISTING_FIELDS = [
+  "_id title nickname accommodates bedrooms bathrooms",
+  "address prices amenities pictures",
+  "publicDescription tags active isListed",
+  "type cleaningFee defaultCheckInTime defaultCheckOutTime",
+].join(" ");
+
+// Fields we request from /reservations — without this Guesty returns only minimal data
+const RESERVATION_FIELDS = [
+  "_id status checkInDateLocalized checkOutDateLocalized checkIn checkOut",
+  "guestsCount numberOfGuests nightsCount confirmationCode",
+  "guest listing listingId money source channel integration",
+  "lastUpdatedAt plannedArrival plannedDeparture notes",
+].join(" ");
 
 export class GuestyAdapter implements PMSAdapter {
   readonly provider = "guesty" as const;
   private accessToken: string | null = null;
-  private tokenExpiry: number = 0;
+  private tokenExpiry = 0;
+  private hostIdx = 0; // resolved during first successful auth
 
   constructor(private credentials: GuestyCredentials) {}
 
-  private async getToken(): Promise<string> {
-    if (this.accessToken && Date.now() < this.tokenExpiry) {
-      return this.accessToken;
-    }
-    const body = new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: this.credentials.clientId ?? this.credentials.client_id ?? "",
-      client_secret: this.credentials.clientSecret ?? this.credentials.client_secret ?? "",
-      scope: "open-api",
-    });
+  private async getToken(signal?: AbortSignal): Promise<string> {
+    if (this.accessToken && Date.now() < this.tokenExpiry) return this.accessToken;
 
-    const MAX_RETRIES = 5;
-    let delay = 3000;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      let res: Response;
+    // Try each host in order; on a 4xx auth failure, move on to the next
+    for (let h = 0; h < HOSTS.length; h++) {
+      const host = HOSTS[h];
+      const bodyParams: Record<string, string> = {
+        grant_type: "client_credentials",
+        client_id: this.credentials.clientId ?? this.credentials.client_id ?? "",
+        client_secret: this.credentials.clientSecret ?? this.credentials.client_secret ?? "",
+      };
+      if (host.scope) bodyParams.scope = host.scope;
+      const body = new URLSearchParams(bodyParams);
+      let delay = 3000;
+      for (let attempt = 0; attempt <= 5; attempt++) {
+        let res: Response;
+        try {
+          res = await fetch(host.auth, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
+            signal,
+          });
+        } catch (err) {
+          const cause = err instanceof Error && err.cause instanceof Error ? `: ${err.cause.message}` : "";
+          throw new Error(`Guesty auth network error${cause}`);
+        }
+        if (res.status === 429) {
+          if (attempt === 5) throw new Error("Guesty auth rate limited after 5 retries");
+          const retryAfter = Number(res.headers.get("Retry-After") ?? 0) * 1000;
+          await new Promise((r) => setTimeout(r, retryAfter || delay));
+          delay *= 2;
+          continue;
+        }
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          // On any 4xx (wrong host or invalid scope), try the next host
+          if (res.status < 500 && h < HOSTS.length - 1) break;
+          throw new Error(`Guesty auth failed (${res.status}): ${text.slice(0, 200)}`);
+        }
+        const data = await res.json();
+        this.hostIdx = h;
+        this.accessToken = data.access_token;
+        this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+        return this.accessToken!;
+      }
+    }
+    throw new Error("Guesty auth failed: credentials rejected on all endpoints");
+  }
+
+  private get baseUrl() { return HOSTS[this.hostIdx].base; }
+
+  // Single-shot auth + fetch used only for testConnection — no retries, respects AbortSignal
+  private async getWithSignal<T>(path: string, params: Record<string, string>, signal: AbortSignal): Promise<T> {
+    // Try each host with a single auth attempt (no retry loops)
+    let lastErr = "Unknown";
+    for (let h = 0; h < HOSTS.length; h++) {
+      const host = HOSTS[h];
+      const bodyParams: Record<string, string> = {
+        grant_type: "client_credentials",
+        client_id: this.credentials.clientId ?? this.credentials.client_id ?? "",
+        client_secret: this.credentials.clientSecret ?? this.credentials.client_secret ?? "",
+      };
+      if (host.scope) bodyParams.scope = host.scope;
+
+      let authRes: Response;
       try {
-        res = await fetch(AUTH_URL, {
+        authRes = await fetch(host.auth, {
           method: "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body,
+          body: new URLSearchParams(bodyParams),
+          signal,
         });
       } catch (err) {
-        const cause = err instanceof Error && err.cause instanceof Error ? `: ${err.cause.message}` : "";
-        throw new Error(`Guesty auth network error${cause}`);
+        throw err; // network error or abort — stop immediately
       }
+
+      if (!authRes.ok) {
+        const text = await authRes.text().catch(() => "");
+        lastErr = `Guesty auth failed (${authRes.status}): ${text.slice(0, 200)}`;
+        if (authRes.status < 500 && h < HOSTS.length - 1) continue; // try next host
+        throw new Error(lastErr);
+      }
+
+      const { access_token } = await authRes.json();
+      const url = new URL(`${host.base}${path}`);
+      Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
+      const apiRes = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${access_token}` },
+        signal,
+      });
+
+      if (!apiRes.ok) {
+        const text = await apiRes.text().catch(() => "");
+        throw new Error(`Guesty API error ${apiRes.status}: ${path} — ${text.slice(0, 200)}`);
+      }
+
+      // Cache the resolved token and host for subsequent calls
+      this.hostIdx = h;
+      this.accessToken = access_token;
+      this.tokenExpiry = Date.now() + 3500 * 1000;
+
+      return apiRes.json();
+    }
+    throw new Error(lastErr);
+  }
+
+  private async get<T>(path: string, params?: Record<string, string>): Promise<T> {
+    const token = await this.getToken();
+    const url = new URL(`${this.baseUrl}${path}`);
+    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
+    let delay = 2000;
+    for (let attempt = 0; attempt <= 5; attempt++) {
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.status === 429) {
-        if (attempt === MAX_RETRIES) throw new Error(`Guesty auth rate limited after ${MAX_RETRIES} retries`);
+        if (attempt === 5) throw new Error(`Guesty API rate limited: ${path}`);
         const retryAfter = Number(res.headers.get("Retry-After") ?? 0) * 1000;
         await new Promise((r) => setTimeout(r, retryAfter || delay));
         delay *= 2;
@@ -58,35 +183,8 @@ export class GuestyAdapter implements PMSAdapter {
       }
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(`Guesty auth failed (${res.status}): ${text.slice(0, 200)}`);
+        throw new Error(`Guesty API error ${res.status}: ${path} — ${text.slice(0, 200)}`);
       }
-      const data = await res.json();
-      this.accessToken = data.access_token;
-      this.tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
-      return this.accessToken!;
-    }
-    throw new Error("Guesty auth failed after retries");
-  }
-
-  private async get<T>(path: string, params?: Record<string, string>): Promise<T> {
-    const token = await this.getToken();
-    const url = new URL(`${BASE_URL}${path}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-
-    const MAX_RETRIES = 5;
-    let delay = 2000;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const res = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.status === 429) {
-        if (attempt === MAX_RETRIES) throw new Error(`Guesty API error 429: ${path} (rate limited after ${MAX_RETRIES} retries)`);
-        const retryAfter = Number(res.headers.get("Retry-After") ?? 0) * 1000;
-        await new Promise((r) => setTimeout(r, retryAfter || delay));
-        delay *= 2;
-        continue;
-      }
-      if (!res.ok) throw new Error(`Guesty API error ${res.status}: ${path}`);
       return res.json();
     }
     throw new Error(`Guesty API error: ${path}`);
@@ -106,25 +204,34 @@ export class GuestyAdapter implements PMSAdapter {
       all.push(...results);
       if (all.length >= data.count || results.length < PAGE) break;
       skip += PAGE;
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 150));
     }
     return all;
   }
 
   async testConnection() {
+    // Use a 8-second hard timeout so the serverless function never hangs
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 8000);
     try {
-      await this.get("/account");
+      await this.getWithSignal("/listings", { limit: "1", skip: "0" }, abort.signal);
       return { ok: true };
     } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : "Unknown" };
+      const msg = err instanceof Error ? err.message : "Unknown";
+      if (abort.signal.aborted) {
+        return { ok: false, error: "Connection timed out — Guesty did not respond within 8 seconds. Check your credentials and try again." };
+      }
+      const hint = msg.includes("404")
+        ? `${msg} — Make sure you're using Open API credentials (Settings → Integrations → API in Guesty), not Booking Engine credentials.`
+        : msg;
+      return { ok: false, error: hint };
+    } finally {
+      clearTimeout(timer);
     }
   }
 
   async fetchProperties(): Promise<PMSProperty[]> {
-    const results = await this.getAll<unknown>("/listings", {
-      // Without explicit fields, Guesty omits bedrooms, bathrooms, pictures, prices, etc.
-      fields: "_id title nickname accommodates bedrooms bathrooms address prices amenities pictures publicDescription tags active isListed",
-    });
+    const results = await this.getAll<unknown>("/listings", { fields: LISTING_FIELDS });
     return results.map((l: unknown) => {
       const listing = l as Record<string, unknown>;
       const address = (listing.address ?? {}) as Record<string, unknown>;
@@ -149,17 +256,23 @@ export class GuestyAdapter implements PMSAdapter {
   }
 
   async fetchBookings(params?: BookingQueryParams): Promise<PMSBooking[]> {
-    const query: Record<string, string> = {
-      // Without explicit fields, Guesty returns only minimal data (_id, dates, listingId).
-      // This tells Guesty to include status, money, guest count, and channel fields.
-      fields: "_id status checkInDateLocalized checkOutDateLocalized checkIn checkOut guestsCount listing listingId money source channel integration lastUpdatedAt",
-    };
+    const query: Record<string, string> = { fields: RESERVATION_FIELDS };
 
     if (params?.since) {
-      // Guesty v1 filter syntax — simple query params are ignored; must use filters[] array
+      // Delta sync — only reservations updated since last sync
       query["filters[0][field]"] = "lastUpdatedAt";
-      query["filters[0][operator]"] = "gte";
+      query["filters[0][operator]"] = "$gte";
       query["filters[0][value]"] = params.since;
+    } else {
+      // Full sync — 3 months back to 3 months forward
+      const from = params?.from ?? new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
+      const to   = params?.to   ?? new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0];
+      query["filters[0][field]"]    = "checkIn";
+      query["filters[0][operator]"] = "$gte";
+      query["filters[0][value]"]    = from;
+      query["filters[1][field]"]    = "checkIn";
+      query["filters[1][operator]"] = "$lte";
+      query["filters[1][value]"]    = to;
     }
 
     const results = await this.getAll<unknown>("/reservations", query);
@@ -167,20 +280,19 @@ export class GuestyAdapter implements PMSAdapter {
       const res = r as Record<string, unknown>;
       const money = (res.money ?? {}) as Record<string, unknown>;
       const listing = (res.listing ?? {}) as Record<string, unknown>;
+      const guest = (res.guest ?? {}) as Record<string, unknown>;
       const guestsField = (res.guests ?? {}) as Record<string, unknown>;
 
-      // Guesty returns listingId as a top-level field OR nested under listing._id
       const propertyExternalId = String(
         res.listingId ?? listing._id ?? listing.id ?? ""
       );
 
-      // Revenue: try multiple field names Guesty uses across API versions
+      // Revenue: prefer host payout, fall back through other money fields
       const totalRevenue = Number(
-        money.totalPaid ?? money.netIncome ?? money.fareAccommodation ??
-        money.hostPayout ?? money.totalRevenue ?? 0
+        money.hostPayout ?? money.ownerRevenue ?? money.totalPaid ?? money.netIncome ??
+        money.fareAccommodation ?? money.totalRevenue ?? 0
       );
 
-      // Guest count: top-level or nested; guests object may have adults/children
       const guestCount = Number(
         res.guestsCount ?? res.numberOfGuests ?? res.guestCount ??
         guestsField.count ?? guestsField.total ??
@@ -189,15 +301,14 @@ export class GuestyAdapter implements PMSAdapter {
           : undefined) ?? 0
       );
 
-      // Dates: localized versions are more reliable
       const checkIn = String(
         res.checkInDateLocalized ?? res.checkIn ?? res.checkInDate ?? ""
-      );
+      ).slice(0, 10);
       const checkOut = String(
         res.checkOutDateLocalized ?? res.checkOut ?? res.checkOutDate ?? ""
-      );
+      ).slice(0, 10);
 
-      // Platform/channel: Guesty returns channel as { _id, name } object, not a string
+      // Platform/channel: Guesty returns channel as an object { _id, name }
       const channelRaw = res.source ?? res.channel ?? res.integration;
       const platform = channelRaw == null
         ? "direct"
@@ -205,8 +316,15 @@ export class GuestyAdapter implements PMSAdapter {
           ? String((channelRaw as Record<string, unknown>).name ?? (channelRaw as Record<string, unknown>)._id ?? "direct")
           : String(channelRaw || "direct");
 
-      // Status: try multiple field names
-      const status = String(res.status ?? res.reservationStatus ?? res.type ?? "");
+      const rawStatus = String(res.status ?? res.reservationStatus ?? "").toLowerCase();
+      const status = STATUS_MAP[rawStatus] ?? rawStatus;
+
+      // Merge guest name into rawData for AI context
+      const guestName = [guest.firstName, guest.lastName].filter(Boolean).join(" ") || undefined;
+      const enrichedRawData: Record<string, unknown> = { ...res };
+      if (guestName) enrichedRawData._guestName = guestName;
+      if (res.confirmationCode) enrichedRawData._confirmationCode = res.confirmationCode;
+      if (res.nightsCount) enrichedRawData._nights = res.nightsCount;
 
       return {
         externalId: String(res._id ?? res.id ?? ""),
@@ -217,7 +335,7 @@ export class GuestyAdapter implements PMSAdapter {
         guests: guestCount,
         totalRevenue,
         platform,
-        rawData: res,
+        rawData: enrichedRawData,
       };
     });
   }

@@ -333,18 +333,18 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
   }
 
   return (
-    <div className="h-full overflow-y-auto px-16 py-8">
+    <div className="h-full overflow-y-auto px-4 sm:px-8 md:px-12 lg:px-16 py-4 sm:py-8">
       <div className="mx-auto max-w-[1200px] space-y-5">
 
         {/* Page header */}
         <div>
-          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[rgba(255,159,10,0.3)] bg-[rgba(255,159,10,0.1)] px-3 py-1 text-[11px] font-semibold text-[#d97706]">
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[rgba(255,159,10,0.3)] bg-[rgba(255,159,10,0.1)] px-3 py-1 text-[12px] font-semibold text-[#d97706]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#d97706]" />
             Sample data — connect your accounts in Settings
           </div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#2997ff]">Email Performance</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#2997ff]">Email Performance</p>
           <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-slate-900">Campaign Analytics</h1>
-          <p className="mt-0.5 text-[12px] text-slate-400">{ALL_CLIENTS.length} clients · {RAW.length} campaigns</p>
+          <p className="mt-0.5 text-[12px] text-slate-500">{ALL_CLIENTS.length} clients · {RAW.length} campaigns</p>
         </div>
 
         {/* Stats strip */}
@@ -362,7 +362,7 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
                 <div key={s.label} className="flex items-center gap-5">
                   <div className="px-1 text-center">
                     <div className="text-[18px] font-bold tabular-nums tracking-tight" style={{ color: s.c }}>{s.val}</div>
-                    <div className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-400">{s.label}</div>
+                    <div className="mt-0.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-500">{s.label}</div>
                   </div>
                   {i < arr.length - 1 && <div className="h-8 w-px shrink-0 bg-[#f0f4fb]" />}
                 </div>
@@ -377,19 +377,19 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
               <Surface className="p-4">
                 <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">Monthly Avg Open Rate</p>
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Monthly Avg Open Rate</p>
                     <div className="mt-1 h-[2px] w-8 rounded-full bg-slate-900" />
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       onClick={() => setActiveMonth(null)}
-                      className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-all ${!activeMonth ? "border-slate-900 bg-slate-900 text-white" : "border-[#dbe6f3] text-slate-500 hover:border-slate-300"}`}
+                      className={`rounded-full border px-3 py-1 text-[12px] font-medium transition-all ${!activeMonth ? "border-slate-900 bg-slate-900 text-white" : "border-[#dbe6f3] text-slate-500 hover:border-slate-300"}`}
                     >All</button>
                     {monthTrend.map(m => (
                       <button
                         key={m.month}
                         onClick={() => setActiveMonth(prev => (prev === m.month ? null : m.month))}
-                        className="rounded-full border px-3 py-1 text-[11px] font-medium transition-all"
+                        className="rounded-full border px-3 py-1 text-[12px] font-medium transition-all"
                         style={activeMonth === m.month ? { borderColor: color, background: color + "18", color } : { borderColor: "#dbe6f3", color: "#64748b" }}
                       >{m.month}</button>
                     ))}
@@ -401,7 +401,7 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
                   series={[{ name: "Avg Open %", data: monthTrend.map(m => +m.open.toFixed(1)) }]}
                   options={chartOptions}
                 />
-                <p className="mt-1 text-center text-[10px] text-slate-400">Click a bar or month pill to filter</p>
+                <p className="mt-1 text-center text-[12px] text-slate-500">Click a bar or month pill to filter</p>
               </Surface>
             )}
 
@@ -427,13 +427,13 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
               {activeTab === "campaigns" && (
                 <>
                   <div className="flex flex-wrap items-center gap-2 border-b border-[#f9fafb] px-6 py-3">
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Segment</span>
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">Segment</span>
                     <div className="h-4 w-px shrink-0 bg-[#e2e8f0]" />
                     {([["all", "All"], ["engagers", "Recent Engagers"], ["contacts", "All Contacts"]] as const).map(([val, label]) => (
                       <button
                         key={val}
                         onClick={() => setSegFilter(val)}
-                        className="rounded-full border px-3.5 py-1 text-[11px] font-medium transition-all"
+                        className="rounded-full border px-3.5 py-1 text-[12px] font-medium transition-all"
                         style={
                           segFilter === val
                             ? val === "all" ? { borderColor: "#111827", background: "#111827", color: "#fff", fontWeight: 600 }
@@ -444,55 +444,59 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
                       >{label}</button>
                     ))}
                     <div className="flex-1" />
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Sort</span>
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">Sort</span>
                     {([["week", "Date"], ["openRate", "Open %"], ["ctr", "CTR %"]] as const).map(([field, label]) => (
                       <button
                         key={field}
                         onClick={() => toggleSort(field)}
-                        className={`flex items-center gap-1 rounded-[8px] border px-3 py-1.5 text-[11px] transition-all ${sortField === field ? "border-[#2563EB] bg-[#EFF6FF] font-semibold text-[#2563EB]" : "border-[#e2e8f0] text-slate-500 hover:border-slate-300"}`}
+                        className={`flex items-center gap-1 rounded-[8px] border px-3 py-1.5 text-[12px] transition-all ${sortField === field ? "border-[#2563EB] bg-[#EFF6FF] font-semibold text-[#2563EB]" : "border-[#e2e8f0] text-slate-500 hover:border-slate-300"}`}
                       >
                         {label} <span>{sortField === field ? (sortDir === "desc" ? "↓" : "↑") : "↕"}</span>
                       </button>
                     ))}
                   </div>
 
-                  <div className="grid border-b-[1.5px] border-slate-900 px-6 py-2" style={{ gridTemplateColumns: "1fr 110px 90px 80px 80px" }}>
-                    {["Subject Line", "Week", "Segment", "Open %", "CTR %"].map(h => (
-                      <span key={h} className="text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500">{h}</span>
-                    ))}
-                  </div>
+                  <div className="overflow-x-auto">
+                    <div className="min-w-[560px]">
+                      <div className="grid border-b-[1.5px] border-slate-900 px-6 py-2" style={{ gridTemplateColumns: "1fr 110px 90px 80px 80px" }}>
+                        {["Subject Line", "Week", "Segment", "Open %", "CTR %"].map(h => (
+                          <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-600">{h}</span>
+                        ))}
+                      </div>
 
-                  <div className="max-h-[480px] overflow-y-auto">
-                    {filteredRows.length === 0 ? (
-                      <div className="py-10 text-center text-[13px] text-slate-400">No campaigns match these filters</div>
-                    ) : filteredRows.map((d, i) => {
-                      const oc = openColor(d.open);
-                      const theme = classifyTheme(d.subj);
-                      return (
-                        <div key={i} className="grid items-start border-b border-[#f9fafb] px-6 py-3 transition-colors hover:bg-slate-50" style={{ gridTemplateColumns: "1fr 110px 90px 80px 80px" }}>
-                          <div>
-                            <div className="text-[13px] font-medium leading-[1.4] text-slate-900">{d.subj}</div>
-                            <span className="mt-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: oc + "12", color: oc }}>{theme}</span>
-                          </div>
-                          <div className="pt-0.5 text-[12px] tabular-nums text-slate-500">{d.week}</div>
-                          <div className="pt-0.5">
-                            <span className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${d.seg === "Recent Engagers" ? "bg-[#EFF6FF] text-[#2563EB]" : "bg-[#F5F3FF] text-[#7C3AED]"}`}>
-                              {d.seg === "Recent Engagers" ? "Engagers" : "All"}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="text-[13px] font-bold tabular-nums" style={{ color: oc }}>{d.open.toFixed(1)}%</div>
-                            <div className="mt-1 h-[3px] w-12 overflow-hidden rounded-full bg-slate-100">
-                              <div className="h-full rounded-full" style={{ width: `${Math.min(d.open, 100)}%`, background: oc }} />
+                      <div className="max-h-[480px] overflow-y-auto">
+                        {filteredRows.length === 0 ? (
+                          <div className="py-10 text-center text-[13px] text-slate-500">No campaigns match these filters</div>
+                        ) : filteredRows.map((d, i) => {
+                          const oc = openColor(d.open);
+                          const theme = classifyTheme(d.subj);
+                          return (
+                            <div key={i} className="grid items-start border-b border-[#f9fafb] px-6 py-3 transition-colors hover:bg-slate-50" style={{ gridTemplateColumns: "1fr 110px 90px 80px 80px" }}>
+                              <div>
+                                <div className="text-[13px] font-medium leading-[1.4] text-slate-900">{d.subj}</div>
+                                <span className="mt-1 inline-block rounded-full px-1.5 py-0.5 text-[12px] font-semibold" style={{ background: oc + "12", color: oc }}>{theme}</span>
+                              </div>
+                              <div className="pt-0.5 text-[12px] tabular-nums text-slate-600">{d.week}</div>
+                              <div className="pt-0.5">
+                                <span className={`inline-block rounded-full px-1.5 py-0.5 text-[12px] font-semibold ${d.seg === "Recent Engagers" ? "bg-[#EFF6FF] text-[#2563EB]" : "bg-[#F5F3FF] text-[#7C3AED]"}`}>
+                                  {d.seg === "Recent Engagers" ? "Engagers" : "All"}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="text-[13px] font-bold tabular-nums" style={{ color: oc }}>{d.open.toFixed(1)}%</div>
+                                <div className="mt-1 h-[3px] w-12 overflow-hidden rounded-full bg-slate-100">
+                                  <div className="h-full rounded-full" style={{ width: `${Math.min(d.open, 100)}%`, background: oc }} />
+                                </div>
+                              </div>
+                              <div className="pt-0.5 text-[13px] font-semibold tabular-nums text-[#2563EB]">{d.ctr.toFixed(2)}%</div>
                             </div>
-                          </div>
-                          <div className="pt-0.5 text-[13px] font-semibold tabular-nums text-[#2563EB]">{d.ctr.toFixed(2)}%</div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="border-t border-[#f0f4fb] px-6 py-2.5 text-right text-[11px] text-slate-400">
+                  <div className="border-t border-[#f0f4fb] px-6 py-2.5 text-right text-[12px] text-slate-500">
                     Showing {filteredRows.length} campaign{filteredRows.length !== 1 ? "s" : ""}
                     {activeMonth && ` · ${activeMonth}`}
                     {segFilter !== "all" && ` · ${segFilter === "engagers" ? "Recent Engagers" : "All Contacts"}`}
@@ -504,17 +508,17 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
               {activeTab === "analysis" && (
                 <>
                   <div className="flex flex-wrap items-center gap-2 border-b border-[#f9fafb] px-6 py-3">
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Filter Month</span>
+                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">Filter Month</span>
                     <div className="h-4 w-px shrink-0 bg-[#e2e8f0]" />
                     <button
                       onClick={() => setActiveMonth(null)}
-                      className={`rounded-full border px-3.5 py-1 text-[11px] font-medium transition-all ${!activeMonth ? "border-slate-900 bg-slate-900 font-semibold text-white" : "border-[#e2e8f0] text-slate-500 hover:border-slate-300"}`}
+                      className={`rounded-full border px-3.5 py-1 text-[12px] font-medium transition-all ${!activeMonth ? "border-slate-900 bg-slate-900 font-semibold text-white" : "border-[#e2e8f0] text-slate-500 hover:border-slate-300"}`}
                     >All</button>
                     {monthTrend.map(m => (
                       <button
                         key={m.month}
                         onClick={() => setActiveMonth(prev => (prev === m.month ? null : m.month))}
-                        className="rounded-full border px-3.5 py-1 text-[11px] font-medium transition-all"
+                        className="rounded-full border px-3.5 py-1 text-[12px] font-medium transition-all"
                         style={activeMonth === m.month ? { borderColor: color, background: color + "18", color } : { borderColor: "#e2e8f0", color: "#64748b" }}
                       >{m.month}</button>
                     ))}
@@ -531,7 +535,7 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
 
 function AnalysisContent({ rows, color }: { rows: Row[]; color: string }) {
   if (!rows.length) {
-    return <div className="py-10 text-center text-[13px] text-slate-400">No data for this selection</div>;
+    return <div className="py-10 text-center text-[13px] text-slate-500">No data for this selection</div>;
   }
 
   const reRows = rows.filter(d => d.seg === "Recent Engagers");
@@ -564,20 +568,20 @@ function AnalysisContent({ rows, color }: { rows: Row[]; color: string }) {
     <div className="space-y-6 px-6 py-5">
       {(reAvg !== null || acAvg !== null) && (
         <div>
-          <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">Segment Comparison</p>
+          <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Segment Comparison</p>
           <div className="grid grid-cols-2 gap-3">
             {reAvg !== null && (
               <div className="rounded-[14px] border border-[#2563EB]/10 bg-[#2563EB]/[0.03] p-4">
                 <div className="text-[22px] font-bold tabular-nums tracking-tight text-[#2563EB]">{reAvg.toFixed(1)}%</div>
                 <div className="mt-0.5 text-[12px] font-semibold text-slate-700">Recent Engagers</div>
-                <div className="text-[11px] text-slate-400">{reRows.length} sends · {reCTR!.toFixed(2)}% CTR</div>
+                <div className="text-[12px] text-slate-500">{reRows.length} sends · {reCTR!.toFixed(2)}% CTR</div>
               </div>
             )}
             {acAvg !== null && (
               <div className="rounded-[14px] border border-[#7C3AED]/10 bg-[#7C3AED]/[0.03] p-4">
                 <div className="text-[22px] font-bold tabular-nums tracking-tight text-[#7C3AED]">{acAvg.toFixed(1)}%</div>
                 <div className="mt-0.5 text-[12px] font-semibold text-slate-700">All Contacts</div>
-                <div className="text-[11px] text-slate-400">{acRows.length} sends · {acCTR!.toFixed(2)}% CTR</div>
+                <div className="text-[12px] text-slate-500">{acRows.length} sends · {acCTR!.toFixed(2)}% CTR</div>
               </div>
             )}
           </div>
@@ -585,18 +589,18 @@ function AnalysisContent({ rows, color }: { rows: Row[]; color: string }) {
       )}
 
       <div>
-        <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">Theme Performance</p>
+        <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Theme Performance</p>
         <div className="space-y-2">
           {themes.map((t, i) => (
             <div key={t.theme} className={`flex items-center gap-3 rounded-[10px] border p-3 ${i === 0 ? "border-slate-900 bg-slate-900" : "border-[#f0f4fb] bg-[#f9fafb]"}`}>
-              <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] text-[10px] font-bold ${i === 0 ? "bg-white/15 text-white" : "bg-[#e2e8f0] text-slate-400"}`}>{i + 1}</div>
+              <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] text-[12px] font-bold ${i === 0 ? "bg-white/15 text-white" : "bg-[#e2e8f0] text-slate-600"}`}>{i + 1}</div>
               <div className="flex-1">
                 <div className={`text-[12px] font-semibold ${i === 0 ? "text-white" : "text-slate-900"}`}>{t.theme}</div>
-                <div className={`text-[10px] ${i === 0 ? "text-white/50" : "text-slate-400"}`}>{t.count} sends</div>
+                <div className={`text-[12px] ${i === 0 ? "text-white/50" : "text-slate-500"}`}>{t.count} sends</div>
               </div>
               <div className="text-right">
                 <div className="text-[14px] font-bold tabular-nums" style={{ color: i === 0 ? "#fff" : color }}>{t.avgOpen.toFixed(1)}%</div>
-                <div className={`text-[10px] ${i === 0 ? "text-white/40" : "text-slate-400"}`}>CTR {t.avgCTR.toFixed(2)}%</div>
+                <div className={`text-[12px] ${i === 0 ? "text-white/40" : "text-slate-500"}`}>CTR {t.avgCTR.toFixed(2)}%</div>
               </div>
             </div>
           ))}
@@ -604,23 +608,23 @@ function AnalysisContent({ rows, color }: { rows: Row[]; color: string }) {
       </div>
 
       <div>
-        <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-400">Best Subject Lines</p>
+        <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Best Subject Lines</p>
         <div className="space-y-1.5">
           {bestRows.map((d, i) => {
             const oc = openColor(d.open);
             return (
               <div key={i} className="flex items-start gap-3 rounded-[10px] border border-[#f0f4fb] bg-[#f9fafb] px-4 py-3">
-                <div className="min-w-[18px] pt-0.5 text-[11px] font-bold text-slate-300">{i + 1}</div>
+                <div className="min-w-[18px] pt-0.5 text-[12px] font-bold text-slate-400">{i + 1}</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[12px] font-medium leading-[1.4] text-slate-900">{d.subj}</div>
                   <div className="mt-1.5 flex items-center gap-2">
-                    <span className="inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold" style={{ background: oc + "12", color: oc }}>{classifyTheme(d.subj)}</span>
-                    <span className="text-[10px] text-slate-400">{d.week}</span>
+                    <span className="inline-block rounded-full px-1.5 py-0.5 text-[12px] font-semibold" style={{ background: oc + "12", color: oc }}>{classifyTheme(d.subj)}</span>
+                    <span className="text-[12px] text-slate-500">{d.week}</span>
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
                   <div className="text-[13px] font-bold tabular-nums" style={{ color: oc }}>{d.open.toFixed(1)}%</div>
-                  <div className="text-[10px] tabular-nums text-[#2563EB]">{d.ctr.toFixed(2)}% CTR</div>
+                  <div className="text-[12px] tabular-nums text-[#2563EB]">{d.ctr.toFixed(2)}% CTR</div>
                 </div>
               </div>
             );

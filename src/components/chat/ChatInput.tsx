@@ -95,6 +95,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
                   <img src={att.preview} alt={att.file.name} className="h-full w-full object-cover" />
                   <button
                     onClick={() => remove(i)}
+                    aria-label={`Remove ${att.file.name}`}
                     className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-700 text-white opacity-0 transition-opacity group-hover:opacity-100"
                   >
                     <X size={8} strokeWidth={3} />
@@ -103,8 +104,8 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
               ) : (
                 <div className="relative flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-slate-50 px-2.5 py-1.5">
                   <FileText size={12} className="flex-shrink-0 text-slate-500" />
-                  <span className="max-w-[120px] truncate text-[11px] text-slate-700">{att.file.name}</span>
-                  <button onClick={() => remove(i)} className="ml-0.5 text-slate-400 hover:text-slate-700 transition-colors">
+                  <span className="max-w-[120px] truncate text-[12px] text-slate-700">{att.file.name}</span>
+                  <button onClick={() => remove(i)} aria-label={`Remove ${att.file.name}`} className="ml-0.5 text-slate-500 hover:text-slate-700 transition-colors">
                     <X size={10} strokeWidth={2.5} />
                   </button>
                 </div>
@@ -137,7 +138,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
           disabled={disabled}
           onClick={() => fileInputRef.current?.click()}
           aria-label="Attach file"
-          className="mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none disabled:cursor-not-allowed"
+          className="mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2 disabled:cursor-not-allowed"
         >
           <Plus size={16} strokeWidth={2} />
         </button>
@@ -152,7 +153,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
           aria-label={placeholder ?? "Chat message"}
           rows={1}
           className={cn(
-            "flex-1 bg-transparent py-1 text-[14.5px] text-slate-900 placeholder:text-slate-400",
+            "flex-1 bg-transparent py-1 text-[14.5px] text-slate-900 placeholder:text-slate-500",
             "outline-none resize-none leading-[1.6]",
             "min-h-[32px] max-h-[180px]",
             disabled && "cursor-not-allowed"
@@ -164,7 +165,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
           disabled={!canSend}
           aria-label="Send message"
           className={cn(
-            "mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)]",
+            "mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2",
             canSend
               ? "bg-[#1a1a1a] text-white hover:bg-[#333] active:scale-95"
               : "cursor-not-allowed bg-slate-100 text-slate-400"
@@ -173,6 +174,12 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
           <ArrowUp size={15} strokeWidth={2.5} />
         </button>
       </div>
+
+      <p className="hidden sm:flex items-center gap-1 mt-1.5 text-[11px] text-slate-400 select-none" aria-hidden="true">
+        <kbd className="inline-flex items-center gap-0.5 font-sans">⌘</kbd>
+        <kbd className="inline-flex items-center gap-0.5 font-sans">↵</kbd>
+        <span>to send</span>
+      </p>
     </div>
   );
 }

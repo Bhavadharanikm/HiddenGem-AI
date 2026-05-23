@@ -3,6 +3,7 @@ import { validateApiKey } from "@/lib/api/auth";
 import { error, ok } from "@/lib/api/response";
 import { getServiceClient } from "@/lib/supabase/service";
 import { getAdAccounts } from "@/lib/meta/oauth";
+import { decryptToken } from "@/lib/crypto/credentials";
 
 export async function GET(req: NextRequest) {
   const isDashboard = req.headers.get("X-Dashboard-Session") === "1";
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   let accounts: Array<{ id: string; name: string }> = [];
   try {
-    const raw = await getAdAccounts(token.access_token);
+    const raw = await getAdAccounts(await decryptToken(token.access_token));
     accounts = raw.map((a) => ({ id: a.account_id, name: a.name }));
   } catch (err) {
     console.error("[meta-ads/status] Failed to fetch ad accounts:", err);

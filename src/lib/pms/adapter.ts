@@ -49,6 +49,8 @@ export interface PMSReview {
 
 export interface BookingQueryParams {
   since?: string; // ISO date — for delta sync
+  from?: string;  // ISO date — window start (full sync)
+  to?: string;    // ISO date — window end (full sync)
   limit?: number;
 }
 

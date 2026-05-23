@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase/service";
 import { encryptCredentials } from "@/lib/crypto/credentials";
+import { createPMSAdapter } from "@/lib/pms/factory";
+import type { PMSProvider } from "@/lib/pms/adapter";
+
+export const maxDuration = 30;
 
 function isDashboard(req: NextRequest) {
   return req.headers.get("X-Dashboard-Session") === "1";
@@ -44,6 +48,20 @@ export async function POST(
     return NextResponse.json({ error: "'provider' and 'credentials' are required" }, { status: 400 });
   }
 
+  // Test the credentials before storing them
+  try {
+    const adapter = createPMSAdapter(body.provider as PMSProvider, body.credentials);
+    const test = await adapter.testConnection();
+    if (!test.ok) {
+      return NextResponse.json({ error: `Connection test failed: ${test.error ?? "Invalid credentials"}` }, { status: 400 });
+    }
+  } catch (err) {
+    return NextResponse.json(
+      { error: `Connection test failed: ${err instanceof Error ? err.message : "Invalid credentials"}` },
+      { status: 400 }
+    );
+  }
+
   const db = getServiceClient();
 
   const encryptedCredentials = await encryptCredentials(body.credentials);
@@ -79,7 +97,7 @@ export async function PATCH(
 
   const { error } = await db
     .from("pms_connections")
-    .update({ sync_status: "idle", last_sync_at: null })
+    .update({ sync_status: "idle" })
     .eq("tenant_id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

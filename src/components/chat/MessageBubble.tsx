@@ -35,7 +35,7 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   thead: ({ children }) => <thead className="bg-[rgba(41,151,255,0.06)] text-slate-600">{children}</thead>,
   tbody: ({ children }) => <tbody className="divide-y divide-[var(--border)]">{children}</tbody>,
   tr: ({ children }) => <tr className="transition-colors hover:bg-[rgba(41,151,255,0.03)]">{children}</tr>,
-  th: ({ children }) => <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">{children}</th>,
+  th: ({ children }) => <th className="px-3 py-2 text-left text-[12px] font-semibold uppercase tracking-wide text-slate-600">{children}</th>,
   td: ({ children }) => <td className="px-3 py-2 text-slate-700">{children}</td>,
   pre: ({ children }) => (
     <pre className="mt-3 overflow-x-auto rounded-xl border border-[var(--border)] bg-slate-50 px-4 py-3 text-[12.5px] leading-relaxed text-slate-800 first:mt-0">
@@ -64,7 +64,7 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
   if (isUser) {
     return (
       <div className="flex justify-end mb-6 animate-fade-in">
-        <div className="max-w-[70%]">
+        <div className="max-w-[88%] sm:max-w-[70%]">
           {/* Attachment previews */}
           {message.attachments && message.attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap justify-end gap-2">
@@ -79,7 +79,7 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
                 ) : (
                   <div key={i} className="flex items-center gap-1.5 rounded-xl border border-[rgba(41,151,255,0.2)] bg-white/70 px-2.5 py-1.5">
                     <FileText size={12} className="text-slate-500 flex-shrink-0" />
-                    <span className="max-w-[120px] truncate text-[11px] text-slate-700">{att.name}</span>
+                    <span className="max-w-[120px] truncate text-[12px] text-slate-700">{att.name}</span>
                   </div>
                 )
               )}
@@ -102,7 +102,7 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
 
   return (
     <div aria-live={isStreaming ? "polite" : undefined} className="flex justify-start mb-6 animate-fade-in">
-      <div className="flex gap-3 max-w-[82%] min-w-0">
+      <div className="flex gap-3 max-w-[92%] sm:max-w-[82%] min-w-0">
         {/* Avatar */}
         <div aria-hidden="true" className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg border border-[rgba(193,209,236,1)] bg-[rgba(255,255,255,0.84)]">
           <Gem size={12} className="text-[var(--brand)]" strokeWidth={1.5} />
@@ -145,7 +145,7 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
               <button
                 onClick={copyToClipboard}
                 aria-label="Copy message"
-                className="flex items-center gap-1 text-[11.5px] text-slate-400 hover:text-slate-600 transition-colors"
+                className="flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-600 transition-colors"
               >
                 {copied ? <Check size={11} strokeWidth={2.5} className="text-[#30d158]" /> : <Copy size={11} strokeWidth={2} />}
                 <span className={copied ? "text-[#30d158]" : ""}>{copied ? "Copied" : "Copy"}</span>
@@ -154,7 +154,7 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
             {message.isError && message.retryContent && onRetry && (
               <button
                 onClick={() => onRetry(message.retryContent!)}
-                className="flex items-center gap-1 text-[11.5px] text-[var(--brand)] hover:text-[#1579d6] font-medium transition-colors"
+                className="flex items-center gap-1 text-[12px] text-[var(--brand)] hover:text-[#1579d6] font-medium transition-colors"
               >
                 <RotateCcw size={10} strokeWidth={2.5} /> Retry
               </button>

@@ -41,19 +41,24 @@ export async function POST(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
 
   if (siteUrl && cronSecret) {
+    const connIds = connections.map((c) => c.id);
     fetch(`${siteUrl}/.netlify/functions/pms-sync-bg-background`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${cronSecret}`,
       },
-      body: JSON.stringify({
-        tenant_id: tenantId,
-        connection_ids: connections.map((c) => c.id),
-      }),
-    }).catch((err) =>
-      console.error("[pms/sync] Failed to invoke background function:", err)
-    );
+      body: JSON.stringify({ tenant_id: tenantId, connection_ids: connIds }),
+    }).then(async (bgRes) => {
+      if (!bgRes.ok) {
+        const text = await bgRes.text().catch(() => "");
+        console.error(`[pms/sync] Background function returned ${bgRes.status}: ${text.slice(0, 200)}`);
+        await db.from("pms_connections").update({ sync_status: "error" }).in("id", connIds);
+      }
+    }).catch(async (err) => {
+      console.error("[pms/sync] Failed to invoke background function:", err);
+      await db.from("pms_connections").update({ sync_status: "error" }).in("id", connIds);
+    });
   } else {
     // Local dev fallback — runs inline (no 15-min limit needed locally)
     const { after } = await import("next/server");
@@ -84,8 +89,13 @@ export async function POST(req: NextRequest) {
           }
           const { data: storedProps } = await db.from("pms_properties").select("id, external_id").eq("tenant_id", tenantId);
           const propIdMap: Record<string, string> = Object.fromEntries((storedProps ?? []).map((p) => [p.external_id, p.id]));
+          const syncNow = new Date();
+          const from3m = new Date(syncNow); from3m.setMonth(from3m.getMonth() - 3);
+          const to3m   = new Date(syncNow); to3m.setMonth(to3m.getMonth() + 3);
           const bookings = await adapter.fetchBookings(
-            conn.last_sync_at ? { since: conn.last_sync_at } : undefined
+            conn.last_sync_at
+              ? { since: conn.last_sync_at }
+              : { from: from3m.toISOString().split("T")[0], to: to3m.toISOString().split("T")[0] }
           );
           if (bookings.length > 0) {
             const bookingRows = bookings.filter((b) => propIdMap[b.propertyExternalId]).map((b) => ({
@@ -101,10 +111,10 @@ export async function POST(req: NextRequest) {
             totalBookings += bookingRows.length;
           }
           // Derived metrics — one date per month for last 4 years
-          const now = new Date();
+          const metricsNow = new Date();
           const metricDates: string[] = [];
           for (let m = 0; m <= 48; m++) {
-            const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+            const d = new Date(metricsNow.getFullYear(), metricsNow.getMonth() - m, 1);
             metricDates.push(d.toISOString().split("T")[0]);
           }
           await Promise.all(

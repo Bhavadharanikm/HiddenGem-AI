@@ -17,9 +17,9 @@ function formatDate(d: string | null) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "ready") return <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">Ready</span>;
-  if (status === "error") return <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Error</span>;
-  return <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border border-[rgba(41,151,255,0.2)]"><Loader2 size={10} className="animate-spin" />{status}</span>;
+  if (status === "ready") return <span className="text-[12px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">Ready</span>;
+  if (status === "error") return <span className="text-[12px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Error</span>;
+  return <span className="inline-flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-full bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border border-[rgba(41,151,255,0.2)]"><Loader2 size={10} className="animate-spin" />{status}</span>;
 }
 
 export default function KnowledgeBaseView({ clientId, clientName }: { clientId: string; clientName: string }) {
@@ -85,7 +85,7 @@ export default function KnowledgeBaseView({ clientId, clientName }: { clientId: 
               <FileText size={20} className="text-slate-400" strokeWidth={1.5} />
             </div>
             <p className="text-[14px] font-medium text-slate-600 mb-1">No documents yet</p>
-            <p className="text-[12px] text-slate-400">Add Google Drive documents in Settings → Knowledge Base.</p>
+            <p className="text-[12px] text-slate-500">Add Google Drive documents in Settings → Knowledge Base.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -98,7 +98,7 @@ export default function KnowledgeBaseView({ clientId, clientName }: { clientId: 
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-semibold text-slate-900 truncate">{doc.name}</p>
                     {doc.last_modified_at && (
-                      <p className="text-[11px] text-slate-400 mt-0.5">Updated {formatDate(doc.last_modified_at)}</p>
+                      <p className="text-[12px] text-slate-500 mt-0.5">Updated {formatDate(doc.last_modified_at)}</p>
                     )}
                   </div>
                   <StatusBadge status={doc.status} />
@@ -115,7 +115,7 @@ export default function KnowledgeBaseView({ clientId, clientName }: { clientId: 
                 </div>
                 {doc.status === "error" && doc.error_msg && (
                   <div className="px-5 pb-4">
-                    <p className="text-[11px] text-red-500 leading-relaxed">{doc.error_msg}</p>
+                    <p className="text-[12px] text-red-500 leading-relaxed">{doc.error_msg}</p>
                   </div>
                 )}
               </div>

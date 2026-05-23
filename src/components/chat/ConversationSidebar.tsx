@@ -9,8 +9,11 @@ import {
   Target,
   Settings,
   Mail,
-  Check,
-  ExternalLink,
+  HelpCircle,
+  X,
+  Send,
+  MessageCircle,
+  Bug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ClientSwitcher from "./ClientSwitcher";
@@ -25,8 +28,6 @@ type Props = {
   onNavigate: (view: "chat" | "knowledge" | "performance" | "email") => void;
   onFilterApply?: (month: number, year: number) => void;
 };
-
-type KDoc = { id: string; name: string; google_doc_url: string; status: string };
 
 const NAV_ITEMS = [
   { icon: MessageSquare, label: "Chat", view: "chat" as const },
@@ -45,33 +46,35 @@ export default function ConversationSidebar({
   onNavigate,
   onFilterApply,
 }: Props) {
-  const [month, setMonth] = useState(new Date().getMonth());
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [filterApplied, setFilterApplied] = useState(false);
-  const [masterBrandDoc, setMasterBrandDoc] = useState<KDoc | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpType, setHelpType] = useState<"ticket" | "feedback">("ticket");
+  const [helpSubject, setHelpSubject] = useState("");
+  const [helpMessage, setHelpMessage] = useState("");
+  const [helpSent, setHelpSent] = useState(false);
+  const [helpSending, setHelpSending] = useState(false);
 
-  useEffect(() => {
-    setMonth(new Date().getMonth());
-    setYear(new Date().getFullYear());
-    setFilterApplied(false);
-  }, [selectedClient?.id]);
+  function openHelp(type: "ticket" | "feedback") {
+    setHelpType(type);
+    setHelpSubject("");
+    setHelpMessage("");
+    setHelpSent(false);
+    setHelpOpen(true);
+  }
 
-  useEffect(() => {
-    setMasterBrandDoc(null);
-    if (!selectedClient) return;
-    fetch(`/api/v1/clients/${selectedClient.id}/knowledge`, { headers: { "X-Dashboard-Session": "1" } })
-      .then((r) => r.json())
-      .then((j) => {
-        const doc = (j.docs as KDoc[] ?? []).find(
-          (d) => d.name === "Master Brand Document" && d.status === "ready"
-        );
-        setMasterBrandDoc(doc ?? null);
-      })
-      .catch(() => {});
-  }, [selectedClient?.id]);
+  function submitHelp() {
+    if (!helpMessage.trim()) return;
+    setHelpSending(true);
+    const subject = encodeURIComponent(
+      helpType === "ticket"
+        ? `[Support] ${helpSubject || "Help request"}`
+        : `[Feedback] ${helpSubject || "Feedback"}`
+    );
+    const body = encodeURIComponent(helpMessage);
+    window.location.href = `mailto:leshan@hiddengem.media?subject=${subject}&body=${body}`;
+    setHelpSent(true);
+    setHelpSending(false);
+  }
 
-  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const YEARS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
   return (
     <aside
@@ -97,7 +100,7 @@ export default function ConversationSidebar({
 
       {/* Client Switcher section */}
       <div className="px-2 py-1">
-        <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <p className="mb-1 px-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-600">
           Client
         </p>
         <ClientSwitcher
@@ -110,45 +113,9 @@ export default function ConversationSidebar({
       {/* Divider */}
       <div className="mx-4 my-3 border-t border-[var(--border)]" />
 
-      {/* Month filter */}
-      <div className="px-2 mb-2">
-        <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-          Month
-        </p>
-        <div className="flex gap-1.5">
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="flex-1 rounded-xl border border-[var(--border)] bg-white px-2.5 py-2 text-[12px] font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[rgba(41,151,255,0.25)] appearance-none cursor-pointer"
-          >
-            {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
-          </select>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="w-[70px] rounded-xl border border-[var(--border)] bg-white px-2 py-2 text-[12px] font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[rgba(41,151,255,0.25)] appearance-none cursor-pointer"
-          >
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
-        <button
-          onClick={() => {
-            onFilterApply?.(month, year);
-            setFilterApplied(true);
-            setTimeout(() => setFilterApplied(false), 1800);
-          }}
-          className="mt-2 w-full rounded-xl bg-[var(--brand)] py-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#1579d6] active:bg-[#1340aa] flex items-center justify-center gap-1.5"
-        >
-          {filterApplied ? <><Check size={11} strokeWidth={3} /> Applied</> : "Apply Filter"}
-        </button>
-      </div>
-
-      {/* Divider */}
-      <div className="mx-4 mb-3 border-t border-[var(--border)]" />
-
       {/* Navigation */}
       <nav className="px-2" aria-label="Main navigation">
-        <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+        <p className="mb-2 px-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-600">
           Modules
         </p>
         <div className="space-y-1">
@@ -167,7 +134,7 @@ export default function ConversationSidebar({
                 }}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-all duration-150",
-                  isInteractive && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]",
+                  isInteractive && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
                   isActive
                     ? "bg-[var(--brand)] text-white shadow-[0_4px_16px_rgba(41,151,255,0.3)]"
                     : isInteractive
@@ -185,7 +152,7 @@ export default function ConversationSidebar({
                     className={isActive ? "text-white" : "text-current"}
                   />
                 </div>
-                <span className="text-[11.5px] font-bold uppercase tracking-[0.08em]">
+                <span className="text-[12px] font-bold uppercase tracking-[0.08em]">
                   {item.label}
                 </span>
               </button>
@@ -194,51 +161,139 @@ export default function ConversationSidebar({
         </div>
       </nav>
 
-      {/* Master Brand Document */}
-      {masterBrandDoc && (
-        <>
-          <div className="mx-4 my-3 border-t border-[var(--border)]" />
-          <div className="px-2">
-            <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-              Documents
-            </p>
-            <a
-              href={masterBrandDoc.google_doc_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]"
-            >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(15,23,42,0.06)]">
-                <BookOpen size={15} strokeWidth={1.75} className="text-current" />
-              </div>
-              <span className="flex-1 truncate text-[11.5px] font-bold uppercase tracking-[0.08em]">
-                Brand Doc
-              </span>
-              <ExternalLink size={11} className="flex-shrink-0 opacity-50" />
-            </a>
-          </div>
-        </>
-      )}
-
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Settings at bottom */}
-      <div className="px-2 mb-3">
+      {/* Help + Settings at bottom */}
+      <div className="px-2 mb-1 space-y-0.5">
+        {/* Help */}
+        <button
+          onClick={() => openHelp("ticket")}
+          className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(15,23,42,0.06)]">
+            <HelpCircle size={15} strokeWidth={1.75} className="text-current" />
+          </div>
+          <span className="text-[12px] font-bold uppercase tracking-[0.08em]">Help</span>
+        </button>
+
+        {/* Settings */}
         <button
           onClick={onSettingsOpen}
-          className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]"
+          className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(15,23,42,0.06)]">
             <Settings size={15} strokeWidth={1.75} className="text-current" />
           </div>
-          <span className="text-[11.5px] font-bold uppercase tracking-[0.08em]">Settings</span>
+          <span className="text-[12px] font-bold uppercase tracking-[0.08em]">Settings</span>
         </button>
       </div>
 
+      {/* Help modal */}
+      {helpOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setHelpOpen(false); }}>
+          <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px]" onClick={() => setHelpOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-[0_24px_64px_rgba(15,23,42,0.18)] w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[rgba(211,223,244,0.92)]">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(41,151,255,0.1)]">
+                  <HelpCircle size={15} className="text-[var(--brand)]" strokeWidth={2} />
+                </div>
+                <span className="text-[14px] font-semibold text-slate-900">Get help</span>
+              </div>
+              <button onClick={() => setHelpOpen(false)} aria-label="Close help" className="text-slate-500 hover:text-slate-600 transition-colors rounded-lg p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {helpSent ? (
+                <div className="flex flex-col items-center gap-3 py-6 text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(48,209,88,0.12)]">
+                    <Check size={22} className="text-[#30d158]" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-semibold text-slate-900">Email client opened</p>
+                    <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Your email app should open with your message pre-filled. Send it to reach Leshan directly.</p>
+                  </div>
+                  <button onClick={() => setHelpOpen(false)} className="mt-2 text-[12px] text-[var(--brand)] font-medium hover:underline">
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Type toggle */}
+                  <div className="flex gap-2">
+                    {([["ticket", Bug, "Support ticket"], ["feedback", MessageCircle, "Feedback"]] as const).map(([type, Icon, label]) => (
+                      <button
+                        key={type}
+                        onClick={() => setHelpType(type)}
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-[12px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
+                          helpType === type
+                            ? "bg-[rgba(41,151,255,0.08)] border-[rgba(41,151,255,0.35)] text-[var(--brand)]"
+                            : "bg-white border-[rgba(211,223,244,0.92)] text-slate-500 hover:border-[rgba(41,151,255,0.25)] hover:text-slate-700"
+                        )}
+                      >
+                        <Icon size={13} strokeWidth={2} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Subject */}
+                  <div>
+                    <label className="text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-600 block mb-1.5">
+                      {helpType === "ticket" ? "What's the issue?" : "Subject"}
+                    </label>
+                    <input
+                      type="text"
+                      value={helpSubject}
+                      onChange={(e) => setHelpSubject(e.target.value)}
+                      placeholder={helpType === "ticket" ? "e.g. Sync not working" : "e.g. Feature idea"}
+                      className="w-full rounded-xl border border-[rgba(211,223,244,0.92)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all"
+                    />
+                  </div>
+
+                  {/* Message */}
+                  <div>
+                    <label className="text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-600 block mb-1.5">
+                      {helpType === "ticket" ? "Describe the problem" : "Your feedback"}
+                    </label>
+                    <textarea
+                      value={helpMessage}
+                      onChange={(e) => setHelpMessage(e.target.value)}
+                      placeholder={helpType === "ticket"
+                        ? "What were you trying to do? What happened instead?"
+                        : "What would make this tool better for you?"}
+                      rows={4}
+                      className="w-full rounded-xl border border-[rgba(211,223,244,0.92)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  <p className="text-[12px] text-slate-500 leading-relaxed">
+                    Sends directly to <span className="font-medium text-slate-600">leshan@hiddengem.media</span> via your email client.
+                  </p>
+
+                  <button
+                    onClick={submitHelp}
+                    disabled={!helpMessage.trim()}
+                    className="flex w-full items-center justify-center gap-2 py-2.5 rounded-xl bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2"
+                  >
+                    {helpSending ? <span className="animate-spin inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full" /> : <Send size={13} strokeWidth={2} />}
+                    {helpType === "ticket" ? "Send support request" : "Send feedback"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="border-t border-[var(--border)] px-4 py-3">
-        <p className="text-[11px] text-slate-500">
+        <p className="text-[12px] text-slate-500">
           Powered by HiddenGem Media
         </p>
       </div>

@@ -66,8 +66,8 @@ const revenueCards = [
 function SectionRail({ number, title, accent }: { number: string; title: string; accent: string }) {
   return (
     <div className="mb-4 flex items-center gap-3">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{number}</span>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{title}</span>
+      <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">{number}</span>
+      <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">{title}</span>
       <div className="h-px flex-1 bg-[rgba(211,223,244,0.92)]" />
       <div className={`h-1 w-6 rounded-full ${accent}`} />
     </div>
@@ -160,16 +160,16 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
       }}
     >
 
-      <div className="relative z-10 mx-auto max-w-[1500px] px-[72px] py-8">
+      <div className="relative z-10 mx-auto max-w-[1500px] px-4 sm:px-8 md:px-12 xl:px-[72px] py-8">
 
         {/* Header */}
         <header className="mb-8 text-center">
-          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[rgba(255,159,10,0.3)] bg-[rgba(255,159,10,0.1)] px-3 py-1 text-[11px] font-semibold text-[#d97706]">
+          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[rgba(255,159,10,0.3)] bg-[rgba(255,159,10,0.1)] px-3 py-1 text-[12px] font-semibold text-[#d97706]">
             <span className="h-1.5 w-1.5 rounded-full bg-[#d97706]" />
             Sample data — connect your accounts in Settings
           </div>
           <h1 className="text-[clamp(1.8rem,3vw,2.8rem)] font-semibold tracking-[-0.05em] text-slate-900">HGM Client</h1>
-          <div className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#2997ff]">Social • February 2026 – April 2026</div>
+          <div className="mt-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#2997ff]">Social • February 2026 – April 2026</div>
           <div className="mt-1.5 text-[12px] text-slate-500">Performance Overview</div>
         </header>
 
@@ -178,9 +178,9 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           <div className="grid md:grid-cols-2 xl:grid-cols-6">
             {summaryStats.map((item, index) => (
               <div key={item.label} className={`px-5 py-5 text-center ${index > 0 ? "border-t border-[rgba(226,232,240,0.92)] xl:border-l xl:border-t-0 md:[&:nth-child(n+3)]:border-t" : ""}`}>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{item.label}</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
                 <div className="mt-2 text-[15px] font-semibold text-slate-900">{item.value}</div>
-                <div className="mt-1 text-[11px] font-medium text-slate-500">{item.note}</div>
+                <div className="mt-1 text-[12px] font-medium text-slate-500">{item.note}</div>
               </div>
             ))}
           </div>
@@ -195,15 +195,15 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
               <div className="mt-4 space-y-3">
                 {funnelRows.map((row, index) => (
                   <div key={row.label}>
-                    <div className="grid items-center gap-3 md:grid-cols-[130px_1fr_72px]">
-                      <div className="text-right text-[12px] font-semibold text-slate-500">{row.label}</div>
+                    <div className="grid items-center gap-2 grid-cols-[80px_1fr_60px] sm:grid-cols-[130px_1fr_72px]">
+                      <div className="text-right text-[12px] font-semibold text-slate-600">{row.label}</div>
                       <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/60">
                         <div className={`h-full rounded-full ${row.color}`} style={{ width: row.width }} />
                       </div>
                       <div className={`text-right text-[13px] font-semibold ${index === funnelRows.length - 1 ? "text-[#63d26d]" : "text-slate-500"}`}>{row.value}</div>
                     </div>
                     {index < funnelRows.length - 1 && (
-                      <div className="pt-1.5 text-center text-[10px] font-semibold text-slate-400">
+                      <div className="pt-1.5 text-center text-[12px] font-semibold text-slate-500">
                         {index === 0 ? "↓ 2.3% to followers" : index === 1 ? "↓ 57.9% to website sessions" : index === 2 ? "↓ 4.6% to leads" : "↓ revenue"}
                       </div>
                     )}
@@ -229,9 +229,9 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(260px,0.75fr)]">
             {/* Hero tile */}
             <Surface className="p-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Total Content Views</div>
+              <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">Total Content Views</div>
               <div className="mt-2 text-[4.5rem] font-bold leading-none tracking-[-0.05em] text-slate-900">318.6K</div>
-              <div className="mt-2 text-[13px] text-slate-500">Across all platforms, April 2026</div>
+              <div className="mt-2 text-[13px] text-slate-600">Across all platforms, April 2026</div>
               {/* Thin platform bars */}
               <div className="mt-6 space-y-4">
                 {[
@@ -241,8 +241,8 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
                 ].map((p) => (
                   <div key={p.label}>
                     <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-[12px] text-slate-500">{p.label}</span>
-                      <span className="text-[12px] text-slate-400">{p.pct}%</span>
+                      <span className="text-[12px] text-slate-600">{p.label}</span>
+                      <span className="text-[12px] text-slate-500">{p.pct}%</span>
                     </div>
                     <div className="h-[2px] overflow-hidden rounded-full bg-[#e8eef6]">
                       <div className="h-full rounded-full" style={{ width: `${p.pct}%`, backgroundColor: p.color }} />
@@ -252,35 +252,35 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
               </div>
               {/* Bottom badge */}
               <div className="mt-6 flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-[rgba(245,163,50,0.14)] px-3 py-1 text-[11px] font-semibold text-[#f5a332]">
+                <span className="inline-flex rounded-full bg-[rgba(245,163,50,0.14)] px-3 py-1 text-[12px] font-semibold text-[#f5a332]">
                   Apr current 318.6K
                 </span>
-                <span className="text-[12px] text-slate-400">Current month visibility</span>
+                <span className="text-[12px] text-slate-500">Current month visibility</span>
               </div>
             </Surface>
             {/* Side cards */}
             <div className="space-y-3">
               <Surface className="p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">IG Views</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">IG Views</div>
                 <div className="mt-2 text-[15px] font-bold text-slate-900">171,320</div>
-                <span className="mt-2 inline-flex rounded-full bg-[rgba(124,58,237,0.10)] px-2.5 py-1 text-[11px] font-semibold text-[#7c3aed]">54% of total</span>
+                <span className="mt-2 inline-flex rounded-full bg-[rgba(124,58,237,0.10)] px-2.5 py-1 text-[12px] font-semibold text-[#7c3aed]">54% of total</span>
               </Surface>
               <Surface className="p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">FB Views</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">FB Views</div>
                 <div className="mt-2 text-[15px] font-bold text-slate-900">136,420</div>
-                <span className="mt-2 inline-flex rounded-full bg-[rgba(245,163,50,0.14)] px-2.5 py-1 text-[11px] font-semibold text-[#f5a332]">43% of total</span>
+                <span className="mt-2 inline-flex rounded-full bg-[rgba(245,163,50,0.14)] px-2.5 py-1 text-[12px] font-semibold text-[#f5a332]">43% of total</span>
               </Surface>
               <Surface className="p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">TikTok Views</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">TikTok Views</div>
                 <div className="mt-2 text-[15px] font-bold text-slate-900">10,900</div>
-                <div className="mt-2 text-[12px] text-slate-400">April 2026 current</div>
+                <div className="mt-2 text-[12px] text-slate-500">April 2026 current</div>
               </Surface>
             </div>
           </div>
           {/* Full-width chart below */}
           <Surface className="mt-4 p-5">
             <div className="text-[13px] font-semibold text-slate-900">Monthly Content Views</div>
-            <div className="text-[11px] text-slate-500">Platform breakdown · Apr 2026</div>
+            <div className="text-[12px] text-slate-500">Platform breakdown · Apr 2026</div>
             <BarChart
               series={[
                 { name: "Instagram", data: [195000, 148000, 171320] },
@@ -292,7 +292,7 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
               yFormatter={(v) => v >= 1000 ? Math.round(v / 1000) + "K" : String(v)}
               height={200}
             />
-            <div className="mt-2 flex flex-wrap gap-4 text-[11px] font-semibold text-slate-500">
+            <div className="mt-2 flex flex-wrap gap-4 text-[12px] font-semibold text-slate-500">
               <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-[#7c3aed]" />Instagram</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-[#f5a332]" />Facebook</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-[#14b8a6]" />TikTok</span>
@@ -306,18 +306,18 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           <div className="grid gap-3 xl:grid-cols-4">
             {audienceCards.map((item) => (
               <Surface key={item.label} className="min-h-[178px] p-5">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{item.label}</div>
-                <div className="text-[11px] font-medium text-slate-400">{item.sub}</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
+                <div className="text-[12px] font-medium text-slate-500">{item.sub}</div>
                 <div className="mt-3 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">{item.value}</div>
-                <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.badgeColor}`}>{item.badge}</span>
+                <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[12px] font-semibold ${item.badgeColor}`}>{item.badge}</span>
                 <div className="my-3 h-px bg-[rgba(226,232,240,0.92)]" />
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="text-[11px] font-semibold text-slate-400">{item.footerA}</div>
+                    <div className="text-[12px] font-semibold text-slate-500">{item.footerA}</div>
                     <div className="mt-1 text-[13px] font-semibold text-slate-500">{item.valueA}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[11px] font-semibold text-slate-400">{item.footerB}</div>
+                    <div className="text-[12px] font-semibold text-slate-500">{item.footerB}</div>
                     <div className="mt-1 text-[13px] font-semibold text-[#63d26d]">{item.valueB}</div>
                   </div>
                 </div>
@@ -327,7 +327,7 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           <div className="mt-3 grid gap-3 xl:grid-cols-2">
             <Surface className="p-3">
               <div className="text-[13px] font-semibold text-slate-900">Follower Growth</div>
-              <div className="text-[11px] text-slate-500">Monthly cumulative · all platforms</div>
+              <div className="text-[12px] text-slate-500">Monthly cumulative · all platforms</div>
               <BarChart
                 series={[
                   { name: "Instagram", data: [5100, 5500, 4890] },
@@ -338,7 +338,7 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
                 colors={["#355de1", "#f1b34d", "#5abf84"]}
                 yFormatter={kFmt}
               />
-              <div className="mt-2 flex flex-wrap gap-4 text-[11px] font-semibold text-slate-500">
+              <div className="mt-2 flex flex-wrap gap-4 text-[12px] font-semibold text-slate-500">
                 <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-[#355de1]" />Instagram</span>
                 <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-[#f1b34d]" />Facebook</span>
                 <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-[#5abf84]" />TikTok</span>
@@ -346,13 +346,13 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
             </Surface>
             <Surface className="p-3">
               <div className="text-[13px] font-semibold text-slate-900">Platform Distribution</div>
-              <div className="text-[11px] text-slate-500">April 2026 snapshot</div>
+              <div className="text-[12px] text-slate-500">April 2026 snapshot</div>
               <DonutChart
                 series={[4890, 2230, 290]}
                 labels={["Instagram", "Facebook", "TikTok"]}
                 colors={["#355de1", "#f1b34d", "#5abf84"]}
               />
-              <div className="flex flex-wrap justify-center gap-4 text-[11px] font-semibold text-slate-500">
+              <div className="flex flex-wrap justify-center gap-4 text-[12px] font-semibold text-slate-500">
                 <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#355de1]" />Instagram</span>
                 <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#f1b34d]" />Facebook</span>
                 <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#5abf84]" />TikTok</span>
@@ -367,16 +367,16 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           <div className="grid gap-3 xl:grid-cols-3">
             {leadCards.map((item) => (
               <Surface key={item.label} className="p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{item.label}</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
                 <div className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">{item.value}</div>
-                <div className="mt-2 inline-flex rounded-full bg-[rgba(99,210,109,0.16)] px-2.5 py-1 text-[11px] font-semibold text-[#63d26d]">{item.note}</div>
+                <div className="mt-2 inline-flex rounded-full bg-[rgba(99,210,109,0.16)] px-2.5 py-1 text-[12px] font-semibold text-[#63d26d]">{item.note}</div>
               </Surface>
             ))}
           </div>
           <div className="mt-3 grid gap-3 xl:grid-cols-2">
             <Surface className="p-3">
               <div className="text-[13px] font-semibold text-slate-900">New Leads per Month</div>
-              <div className="text-[11px] text-slate-500">April 2026 peak · 196 leads</div>
+              <div className="text-[12px] text-slate-500">April 2026 peak · 196 leads</div>
               <BarChart
                 series={[{ name: "New Leads", data: [100, 169, 196] }]}
                 categories={months3}
@@ -385,7 +385,7 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
             </Surface>
             <Surface className="p-3">
               <div className="text-[13px] font-semibold text-slate-900">Pipeline Growth</div>
-              <div className="text-[11px] text-slate-500">Cumulative leads · 840 → 1,189</div>
+              <div className="text-[12px] text-slate-500">Cumulative leads · 840 → 1,189</div>
               <LineAreaChart
                 series={[{ name: "Pipeline", data: [840, 993, 1189] }]}
                 categories={months3}
@@ -401,24 +401,24 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           <div className="grid gap-3 xl:grid-cols-[minmax(260px,0.64fr)_minmax(0,1.36fr)]">
             <div className="space-y-3">
               <Surface className="p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#2563eb]">Total Sessions</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#2563eb]">Total Sessions</div>
                 <div className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">11.1K</div>
-                <div className="mt-1.5 text-[11px] font-medium text-slate-400">Selected-month range total</div>
+                <div className="mt-1.5 text-[12px] font-medium text-slate-500">Selected-month range total</div>
               </Surface>
               <Surface className="p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#16a34a]">Apr 2026 Peak</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#16a34a]">Apr 2026 Peak</div>
                 <div className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">4,288</div>
-                <div className="mt-2 inline-flex rounded-full bg-[rgba(99,210,109,0.16)] px-2.5 py-1 text-[11px] font-semibold text-[#63d26d]">Highest month</div>
+                <div className="mt-2 inline-flex rounded-full bg-[rgba(99,210,109,0.16)] px-2.5 py-1 text-[12px] font-semibold text-[#63d26d]">Highest month</div>
               </Surface>
               <Surface className="p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7c3aed]">Total Ad Spend</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-[#7c3aed]">Total Ad Spend</div>
                 <div className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">$8,802</div>
-                <div className="mt-1.5 text-[11px] font-medium text-slate-400">Full selected period</div>
+                <div className="mt-1.5 text-[12px] font-medium text-slate-500">Full selected period</div>
               </Surface>
             </div>
             <Surface className="p-3">
               <div className="text-[13px] font-semibold text-slate-900">Traffic Trend</div>
-              <div className="text-[11px] text-slate-500">Monthly sessions · peaking Apr 2026</div>
+              <div className="text-[12px] text-slate-500">Monthly sessions · peaking Apr 2026</div>
               <LineAreaChart
                 series={[{ name: "Sessions", data: [3100, 3712, 4288] }]}
                 categories={months3}
@@ -436,17 +436,17 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           <div className="grid gap-3 xl:grid-cols-3">
             {revenueCards.map((item) => (
               <Surface key={item.label} className="p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">{item.label}</div>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-500">{item.label}</div>
                 <div className="mt-2 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">{item.value}</div>
-                <div className="mt-2 inline-flex rounded-full bg-[rgba(99,210,109,0.16)] px-2.5 py-1 text-[11px] font-semibold text-[#63d26d]">{item.badge}</div>
+                <div className="mt-2 inline-flex rounded-full bg-[rgba(99,210,109,0.16)] px-2.5 py-1 text-[12px] font-semibold text-[#63d26d]">{item.badge}</div>
                 <div className="my-3 h-px bg-[rgba(226,232,240,0.92)]" />
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="text-[11px] font-semibold text-slate-400">{item.leftLabel}</div>
+                    <div className="text-[12px] font-semibold text-slate-500">{item.leftLabel}</div>
                     <div className="mt-1 text-[13px] font-semibold text-slate-500">{item.leftValue}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[11px] font-semibold text-slate-400">{item.rightLabel}</div>
+                    <div className="text-[12px] font-semibold text-slate-500">{item.rightLabel}</div>
                     <div className="mt-1 text-[13px] font-semibold text-slate-500">{item.rightValue}</div>
                   </div>
                 </div>
@@ -456,7 +456,7 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           <div className="mt-3 grid gap-3 xl:grid-cols-2">
             <Surface className="p-3">
               <div className="text-[13px] font-semibold text-slate-900">Total vs Direct Revenue</div>
-              <div className="text-[11px] text-slate-500">Feb – Apr 2026</div>
+              <div className="text-[12px] text-slate-500">Feb – Apr 2026</div>
               <LineAreaChart
                 series={[
                   { name: "Total Revenue", data: [180000, 230000, 264800] },
@@ -466,14 +466,14 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
                 colors={["#416be7", "#8a56f0"]}
                 yFormatter={$kFmt}
               />
-              <div className="mt-2 flex flex-wrap gap-4 text-[11px] font-semibold text-slate-500">
+              <div className="mt-2 flex flex-wrap gap-4 text-[12px] font-semibold text-slate-500">
                 <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#416be7]" />Total Revenue</span>
                 <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#8a56f0]" />Direct Revenue</span>
               </div>
             </Surface>
             <Surface className="p-3">
               <div className="text-[13px] font-semibold text-slate-900">Direct Booking Split</div>
-              <div className="text-[11px] text-slate-500">Monthly % · direct bookings</div>
+              <div className="text-[12px] text-slate-500">Monthly % · direct bookings</div>
               <BarChart
                 series={[{ name: "Direct %", data: [24, 26, 28] }]}
                 categories={months3}
@@ -484,7 +484,7 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           </div>
           <Surface className="mt-3 p-5">
             <div className="text-[13px] font-semibold text-slate-900">Monthly Revenue Performance</div>
-            <div className="text-[11px] text-slate-500">Total, direct booking, and last year&apos;s revenue across all available months</div>
+            <div className="text-[12px] text-slate-500">Total, direct booking, and last year&apos;s revenue across all available months</div>
             <LineAreaChart
               series={[
                 { name: "Total Revenue", data: [150000, 180000, 230000, 264800] },
@@ -496,7 +496,7 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
               height={180}
               yFormatter={$kFmt}
             />
-            <div className="mt-2 flex flex-wrap justify-center gap-4 text-[11px] font-semibold text-slate-500">
+            <div className="mt-2 flex flex-wrap justify-center gap-4 text-[12px] font-semibold text-slate-500">
               <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#416be7]" />Total Revenue</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#8a56f0]" />Direct Booking Revenue</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-[#b7bdc9]" />LY Revenue</span>
@@ -504,7 +504,7 @@ export default function PerformanceDashboardView({ clientName }: { clientName: s
           </Surface>
         </section>
 
-        <div className="mt-8 text-center text-[11px] text-slate-400">Performance dashboard for {clientName}</div>
+        <div className="mt-8 text-center text-[12px] text-slate-500">Performance dashboard for {clientName}</div>
       </div>
     </div>
   );

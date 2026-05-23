@@ -54,3 +54,24 @@ export async function decryptCredentials(stored: unknown): Promise<Record<string
   // Legacy plaintext — return as-is (will be re-encrypted on next save)
   return stored as Record<string, string>;
 }
+
+// Single-value helpers for OAuth/API tokens stored in text columns
+export async function encryptToken(token: string): Promise<string> {
+  const result = await encryptCredentials({ t: token });
+  if ("v" in result) return JSON.stringify(result);
+  return token; // no key — store plaintext
+}
+
+export async function decryptToken(stored: string): Promise<string> {
+  if (!stored) return stored;
+  try {
+    const parsed = JSON.parse(stored);
+    if (parsed && typeof parsed === "object" && parsed.v === 1) {
+      const creds = await decryptCredentials(parsed);
+      return creds.t ?? stored;
+    }
+  } catch {
+    // not a JSON envelope — plaintext token
+  }
+  return stored;
+}

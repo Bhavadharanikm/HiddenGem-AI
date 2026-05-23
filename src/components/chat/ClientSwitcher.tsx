@@ -70,7 +70,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         className={cn(
           "flex w-full items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-2 text-left transition-colors",
           "hover:border-[var(--border)] hover:bg-white/60",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-1 focus-visible:ring-offset-white",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
           open && "border-[var(--border)] bg-white/70"
         )}
       >
@@ -78,7 +78,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
           <>
             <div
               className={cn(
-                "w-7 h-7 rounded-md border flex items-center justify-center flex-shrink-0 text-[10px] font-semibold",
+                "w-7 h-7 rounded-md border flex items-center justify-center flex-shrink-0 text-[12px] font-semibold",
                 swatchClass(selectedIdx)
               )}
             >
@@ -91,7 +91,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         ) : (
           <>
             <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-white/70">
-              <span className="text-[10px] text-slate-400">—</span>
+              <span className="text-[12px] text-slate-500">—</span>
             </div>
             <span className="flex-1 text-[13px] text-slate-500">
               Select client
@@ -111,19 +111,19 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         <div role="listbox" aria-label="Clients" className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-[var(--border)] bg-[rgba(255,255,255,0.94)] shadow-[0_22px_50px_rgba(15,23,42,0.14)] animate-slide-up backdrop-blur-xl">
           {/* Search input */}
           <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-2.5">
-            <Search size={12} className="flex-shrink-0 text-slate-400" aria-hidden={true} />
+            <Search size={12} className="flex-shrink-0 text-slate-500" aria-hidden={true} />
             <input
               ref={searchRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search clients…"
               aria-label="Search clients"
-              className="flex-1 bg-transparent text-[12.5px] text-slate-900 placeholder:text-slate-400 outline-none"
+              className="flex-1 bg-transparent text-[12.5px] text-slate-900 placeholder:text-slate-500 outline-none"
             />
           </div>
 
           {/* List */}
-          <div className="py-1 max-h-52 overflow-y-auto">
+          <div className="py-1 max-h-[min(13rem,calc(100vh-200px))] overflow-y-auto">
             {filtered.length === 0 ? (
               <p className="px-3 py-3 text-center text-[12px] text-slate-500">
                 No clients found
@@ -144,7 +144,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
                     }}
                     className={cn(
                       "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
                       isActive
                         ? "bg-[rgba(41,151,255,0.08)]"
                         : "hover:bg-[rgba(41,151,255,0.04)]"
@@ -152,7 +152,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
                   >
                     <div
                       className={cn(
-                        "w-6 h-6 rounded-md border flex items-center justify-center flex-shrink-0 text-[11px] font-semibold",
+                        "w-6 h-6 rounded-md border flex items-center justify-center flex-shrink-0 text-[12px] font-semibold",
                         swatchClass(idx)
                       )}
                     >

@@ -127,10 +127,10 @@ function WizardProgressBar({ step }: { step: WizardStep }) {
             <div className={cn("flex-1 h-px transition-colors duration-300", i <= step ? "bg-[var(--brand)]" : "bg-[var(--border)]")} />
           )}
           <div className={cn(
-            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 transition-all duration-300 border",
+            "w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold flex-shrink-0 transition-all duration-300 border",
             i < step  ? "bg-[var(--brand)] border-[var(--brand)] text-white"
             : i === step ? "bg-[rgba(41,151,255,0.1)] border-[var(--brand)] text-[var(--brand)]"
-            : "bg-white border-[var(--border)] text-slate-400"
+            : "bg-white border-[var(--border)] text-slate-500"
           )}>
             {i < step ? <Check size={10} strokeWidth={3} /> : i + 1}
           </div>
@@ -144,10 +144,10 @@ function WizardProgressBar({ step }: { step: WizardStep }) {
 // Input / field helpers
 // ─────────────────────────────────────────────────────────────
 
-const fieldClass = "w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all";
-const labelClass = "text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500 block mb-1.5";
-const primaryBtn = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)]";
-const ghostBtn  = "text-[12px] text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] rounded-lg px-2 py-1";
+const fieldClass = "w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all";
+const labelClass = "text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-600 block mb-1.5";
+const primaryBtn = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2";
+const ghostBtn  = "text-[12px] text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 rounded-lg px-2 py-1";
 
 // ─────────────────────────────────────────────────────────────
 // Add Client Wizard
@@ -251,15 +251,10 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
       {/* Header */}
       <div className="flex items-start justify-between mb-5 flex-shrink-0">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Step {step + 1} of {WIZARD_STEPS.length}</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">Step {step + 1} of {WIZARD_STEPS.length}</p>
           <h2 className="text-[16px] font-semibold text-slate-900 mt-0.5">{stepLabel}</h2>
           <p className="text-[12px] text-slate-500 mt-0.5">{stepSubtitle}</p>
         </div>
-        {step > 0 && step < 4 && (
-          <button onClick={back} className="flex items-center gap-0.5 text-[11px] text-slate-400 hover:text-slate-600 transition-colors ml-4 mt-1">
-            <ChevronLeft size={12} /> Back
-          </button>
-        )}
       </div>
 
       {/* Content */}
@@ -285,7 +280,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                   <div key={doc.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[rgba(41,151,255,0.05)] border border-[var(--border)]">
                     <FileText size={13} className="text-[var(--brand)] flex-shrink-0" />
                     <span className="text-[12px] text-slate-700 truncate flex-1">{doc.name}</span>
-                    <button onClick={() => handleRemoveDoc(doc.id)} className="p-1 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
+                    <button onClick={() => handleRemoveDoc(doc.id)} aria-label="Remove document" className="p-1 text-slate-500 hover:text-red-500 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -297,7 +292,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
               <input value={driveUrl} onChange={(e) => setDriveUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddDoc()} placeholder="https://docs.google.com/..." className={fieldClass} />
             </div>
             <div>
-              <label className={labelClass}>Document name <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+              <label className={labelClass}>Document name <span className="normal-case font-normal text-slate-500">(optional)</span></label>
               <input value={docName} onChange={(e) => setDocName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddDoc()} placeholder="e.g. Brand Guidelines" className={fieldClass} />
             </div>
             {addError && <p className="text-[12px] text-red-500">{addError}</p>}
@@ -345,12 +340,12 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
           <div className="rounded-2xl border border-[var(--border)] bg-white p-5 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-slate-300" />
-              <span className="text-[13px] text-slate-500">Not connected</span>
+              <span className="text-[13px] text-slate-600">Not connected</span>
             </div>
             <a href={`/api/v1/meta-ads/connect?tenant_id=${createdClient.id}`} className="inline-flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] text-white font-semibold px-4 py-2 rounded-xl transition-colors">
               Connect Meta Account
             </a>
-            <p className="text-[11px] text-slate-400">Connecting will redirect you to Meta. You can also connect later from the Meta Ads tab.</p>
+            <p className="text-[12px] text-slate-500">Connecting will redirect you to Meta. You can also connect later from the Meta Ads tab.</p>
           </div>
         )}
 
@@ -363,7 +358,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
               </div>
               <div>
                 <p className="text-[14px] font-semibold text-slate-900">{createdClient.name}</p>
-                <p className="text-[11px] text-slate-400 font-mono">{createdClient.slug}</p>
+                <p className="text-[12px] text-slate-500 font-mono">{createdClient.slug}</p>
               </div>
             </div>
             <div className="space-y-2.5">
@@ -378,7 +373,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
                     {done ? <Check size={9} className="text-[#30d158]" strokeWidth={3} /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />}
                   </div>
                   <span className="text-[12px] text-slate-700 font-medium">{label}</span>
-                  {detail && <span className="text-[11px] text-slate-400">— {detail}</span>}
+                  {detail && <span className="text-[12px] text-slate-500">— {detail}</span>}
                 </div>
               ))}
             </div>
@@ -398,13 +393,20 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
             </button>
           </>
         )}
-        {(step === 1 || step === 2 || step === 3) && (
+        {(step === 1 || step === 2) && (
           <>
-            <button onClick={advance} className={ghostBtn}>Skip</button>
+            <button onClick={back} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 border-slate-300 bg-white text-[12px] font-semibold text-slate-700 hover:border-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2">
+              <ChevronLeft size={14} strokeWidth={2.5} /> Back
+            </button>
             <button onClick={advance} className={primaryBtn}>
-              {step === 3 ? "Finish setup" : "Next"} <ChevronRight size={12} />
+              Next <ChevronRight size={12} />
             </button>
           </>
+        )}
+        {step === 3 && (
+          <button onClick={advance} className={primaryBtn}>
+            Finish setup <ChevronRight size={12} />
+          </button>
         )}
         {step === 4 && createdClient && (
           <>
@@ -429,6 +431,7 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -472,6 +475,13 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
     if (updated.is_active !== previous.is_active) onClientsChange?.();
   }
 
+  function handleClientDeleted(id: string) {
+    const remaining = clients.filter((c) => c.id !== id);
+    setClients(remaining);
+    setSelectedClientId(remaining[0]?.id ?? null);
+    onClientsChange?.();
+  }
+
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
   const selectedIndex  = clients.findIndex((c) => c.id === selectedClientId);
 
@@ -489,8 +499,8 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
       >
         {/* Left sidebar — hidden on mobile during wizard */}
         <div className={cn(
-          "flex-shrink-0 bg-[rgba(248,250,253,0.98)] border-r border-[var(--border)] flex-col w-[200px] sm:w-[220px]",
-          showAddForm ? "hidden sm:flex" : "flex"
+          "flex-shrink-0 bg-[rgba(248,250,253,0.98)] border-r border-[var(--border)] flex-col w-full sm:w-[220px]",
+          showAddForm ? "hidden sm:flex" : mobileShowDetail ? "hidden sm:flex" : "flex"
         )}>
           {/* Header */}
           <div className="px-4 pt-5 pb-4 border-b border-[var(--border)] flex-shrink-0">
@@ -500,7 +510,7 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
               </div>
               <div>
                 <p className="text-[13px] font-semibold text-slate-900 leading-none">HiddenGem AI</p>
-                <p className="text-[10px] uppercase tracking-[0.12em] text-slate-400 mt-0.5">Settings</p>
+                <p className="text-[12px] uppercase tracking-[0.12em] text-slate-500 mt-0.5">Settings</p>
               </div>
             </div>
           </div>
@@ -510,7 +520,7 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
             <button
               onClick={() => { setShowAddForm(true); setSelectedClientId(null); }}
               className={cn(
-                "flex items-center gap-1.5 w-full text-[12px] font-semibold px-3 py-2 rounded-xl transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]",
+                "flex items-center gap-1.5 w-full text-[12px] font-semibold px-3 py-2 rounded-xl transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
                 showAddForm
                   ? "bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border-[rgba(41,151,255,0.25)]"
                   : "text-[var(--brand)] border-[rgba(41,151,255,0.25)] hover:bg-[rgba(41,151,255,0.06)]"
@@ -533,20 +543,20 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
                 return (
                   <button
                     key={client.id}
-                    onClick={() => { setSelectedClientId(client.id); setShowAddForm(false); }}
+                    onClick={() => { setSelectedClientId(client.id); setShowAddForm(false); setMobileShowDetail(true); }}
                     className={cn(
-                      "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left transition-colors mb-0.5 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]",
+                      "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left transition-colors mb-0.5 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
                       isSelected ? "bg-[rgba(41,151,255,0.08)] border-[rgba(41,151,255,0.18)]" : "border-transparent hover:bg-white hover:border-[var(--border)]"
                     )}
                   >
-                    <div className={cn("w-6 h-6 rounded-lg border flex items-center justify-center flex-shrink-0 text-[10px] font-semibold", swatch)}>
+                    <div className={cn("w-6 h-6 rounded-lg border flex items-center justify-center flex-shrink-0 text-[12px] font-semibold", swatch)}>
                       {getInitials(client.name)}
                     </div>
                     <span className={cn("text-[12px] truncate font-medium flex-1", isSelected ? "text-slate-900" : "text-slate-600")}>
                       {client.name}
                     </span>
                     {!client.is_active && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex-shrink-0">off</span>
+                      <span className="text-[12px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200 flex-shrink-0">off</span>
                     )}
                   </button>
                 );
@@ -556,20 +566,23 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
 
           {/* Close button */}
           <div className="px-3 py-3 border-t border-[var(--border)] flex-shrink-0">
-            <button onClick={onClose} className="flex items-center gap-1.5 w-full text-[12px] text-slate-400 hover:text-slate-600 px-2.5 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)]">
+            <button onClick={onClose} className="flex items-center gap-1.5 w-full text-[12px] text-slate-500 hover:text-slate-600 px-2.5 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2">
               <X size={12} /> Close
             </button>
           </div>
         </div>
 
         {/* Right pane */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
+        <div className={cn(
+          "flex-1 flex flex-col min-w-0 overflow-hidden bg-white",
+          !showAddForm && !mobileShowDetail && "hidden sm:flex"
+        )}>
           {showAddForm ? (
             <>
               {/* Mobile-only close button (sidebar is hidden during wizard) */}
               <div className="flex sm:hidden items-center justify-between px-4 pt-3 pb-0 flex-shrink-0">
-                <span className="text-[11px] text-slate-400">New client</span>
-                <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-colors" aria-label="Close settings">
+                <span className="text-[12px] text-slate-500">New client</span>
+                <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2" aria-label="Close settings">
                   <X size={14} />
                 </button>
               </div>
@@ -583,7 +596,14 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
             </>
           ) : selectedClient ? (
             <div className="flex-1 overflow-y-auto p-5 sm:p-6">
-              <ClientSettingsPanel key={selectedClient.id} client={selectedClient} clientIndex={selectedIndex} onUpdate={(updated) => handleClientUpdated(updated, selectedClient)} />
+              {/* Mobile back button */}
+              <button
+                onClick={() => setMobileShowDetail(false)}
+                className="flex sm:hidden items-center gap-1 mb-4 text-[12px] text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
+              >
+                <ChevronLeft size={13} strokeWidth={2.5} /> Clients
+              </button>
+              <ClientSettingsPanel key={selectedClient.id} client={selectedClient} clientIndex={selectedIndex} onUpdate={(updated) => handleClientUpdated(updated, selectedClient)} onDelete={handleClientDeleted} />
             </div>
           ) : loading ? (
             <div className="flex-1 flex items-center justify-center">
@@ -591,7 +611,7 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-[13px] text-slate-400">Select a client or add a new one</p>
+              <p className="text-[13px] text-slate-500">Select a client or add a new one</p>
             </div>
           )}
         </div>

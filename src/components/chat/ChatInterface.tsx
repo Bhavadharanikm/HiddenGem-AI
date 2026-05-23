@@ -386,7 +386,7 @@ export default function ChatInterface({ initialClients }: Props) {
           {/* Toggle left nav */}
           <button
             onClick={() => setLeftNavOpen((v) => !v)}
-            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
+            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             aria-label="Toggle navigation"
           >
           <PanelLeft size={15} />
@@ -396,10 +396,10 @@ export default function ChatInterface({ initialClients }: Props) {
           <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1 text-[12px]">
             {selectedClient && (
               <>
-                <span className="truncate text-slate-500">
+                <span className="truncate text-slate-600">
                   {selectedClient.name}
                 </span>
-                <span className="select-none text-slate-400">/</span>
+                <span className="select-none text-slate-500">/</span>
               </>
             )}
             <span className="truncate font-medium text-slate-900">{headerTitle}</span>
@@ -409,7 +409,7 @@ export default function ChatInterface({ initialClients }: Props) {
           <button
             onClick={() => setHistoryOpen((v) => !v)}
             disabled={!showHistory}
-            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
+            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             aria-label="Toggle conversation history"
           >
             <PanelRight size={15} />
@@ -427,7 +427,7 @@ export default function ChatInterface({ initialClients }: Props) {
           ) : messages.length === 0 && streamingMessage === null && !isLoading ? (
             <EmptyState clientName={selectedClient?.name} onSuggestion={handleSend} />
           ) : (
-            <div className="mx-auto max-w-3xl space-y-1 px-6 py-8">
+            <div className="mx-auto max-w-3xl space-y-1 px-3 sm:px-6 py-8">
               {messages.map((msg) => (
                 <MessageBubble
                   key={msg.id}
@@ -488,7 +488,7 @@ export default function ChatInterface({ initialClients }: Props) {
         className={cn(
           "flex-shrink-0 transition-[width] duration-200 ease-in-out overflow-hidden",
           "lg:relative fixed inset-y-0 right-0 z-30",
-          showHistory && historyOpen ? "w-[260px]" : "w-0"
+          showHistory && historyOpen ? "w-[85vw] sm:w-[260px]" : "w-0"
         )}
       >
         <ConversationHistory
@@ -506,28 +506,30 @@ export default function ChatInterface({ initialClients }: Props) {
 
 function EmptyState({ clientName, onSuggestion }: { clientName?: string; onSuggestion?: (text: string) => void }) {
   return (
-    <div className="flex h-full min-h-[60vh] select-none flex-col items-center justify-center px-8 text-center">
+    <div className="flex h-full min-h-[60vh] flex-col items-center justify-center px-8 text-center">
       <div className="relative mb-6">
         <div aria-hidden="true" className="absolute -inset-8 rounded-full bg-[rgba(41,151,255,0.16)] blur-3xl" />
-        <div className="relative flex h-18 w-18 items-center justify-center rounded-[1.75rem] border border-[rgba(193,209,236,1)] bg-[rgba(255,255,255,0.74)] shadow-[0_22px_50px_rgba(41,151,255,0.14)]">
+        <div
+          role="img"
+          aria-label="HiddenGem AI"
+          className="relative flex h-18 w-18 items-center justify-center rounded-[1.75rem] border border-[rgba(193,209,236,1)] bg-[rgba(255,255,255,0.74)] shadow-[0_22px_50px_rgba(41,151,255,0.14)]"
+        >
           <Gem size={28} className="text-[var(--brand)]" strokeWidth={1.3} />
         </div>
       </div>
 
       <div aria-hidden="true" className="mb-5 h-px w-16 bg-gradient-to-r from-transparent via-[rgba(41,151,255,0.5)] to-transparent" />
 
-      <h2
-        className="mb-3 text-[22px] font-semibold tracking-[-0.03em] text-slate-900"
-      >
+      <h2 className="mb-3 text-[22px] font-semibold tracking-[-0.03em] text-slate-900">
         {clientName ? `${clientName} AI` : "What can I help you with?"}
       </h2>
 
-      <p className="mb-8 max-w-[360px] text-[13px] leading-relaxed text-slate-500">
+      <p className="mb-8 max-w-[360px] text-[13px] leading-relaxed text-slate-600">
         Ask about bookings, campaign performance, audience data, or anything in
         the knowledge base.
       </p>
 
-      <div className="flex flex-wrap items-center justify-center gap-2.5">
+      <div role="group" aria-label="Suggested questions" className="flex flex-wrap items-center justify-center gap-2.5">
         {["Occupancy rates", "Ad performance", "Campaign history"].map(
           (hint) => (
             <button
@@ -539,13 +541,17 @@ function EmptyState({ clientName, onSuggestion }: { clientName?: string; onSugge
                   : hint;
                 onSuggestion?.(q);
               }}
-              className="cursor-pointer rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.76)] px-3.5 py-1.5 text-[11.5px] text-slate-600 transition-colors hover:border-[rgba(41,151,255,0.35)] hover:bg-[rgba(255,255,255,0.92)] hover:text-[var(--brand)]"
+              className="cursor-pointer rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.76)] px-3.5 py-2 text-[12px] font-medium text-slate-700 transition-colors hover:border-[rgba(41,151,255,0.35)] hover:bg-[rgba(255,255,255,0.92)] hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
             >
               {hint}
             </button>
           )
         )}
       </div>
+
+      <p className="mt-6 text-[12px] text-slate-600">
+        Your AI learns with every conversation. 🤖
+      </p>
     </div>
   );
 }

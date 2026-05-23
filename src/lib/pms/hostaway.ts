@@ -14,6 +14,15 @@ type HostawayCredentials = {
 const BASE_URL = "https://api.hostaway.com/v1";
 const TOKEN_URL = "https://api.hostaway.com/v1/accessTokens";
 
+// Hostaway returns dates as Unix timestamps (number), YYYY-MM-DD strings, or null
+function parseHostawayDate(val: unknown): string {
+  if (!val) return "";
+  if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) return val.slice(0, 10);
+  const n = Number(val);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return new Date(n * 1000).toISOString().split("T")[0];
+}
+
 const STATUS_MAP: Record<string, string> = {
   new:        "confirmed",
   modified:   "confirmed",
@@ -137,6 +146,12 @@ export class HostawayAdapter implements PMSAdapter {
     const query: Record<string, string> = { sortOrder: "desc" };
     if (params?.since) {
       query.modifiedFrom = String(Math.floor(new Date(params.since).getTime() / 1000));
+    } else {
+      // Full sync — 3 months back to 3 months forward
+      const from = params?.from ?? new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
+      const to   = params?.to   ?? new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0];
+      query.arrivalStartDate = from;
+      query.arrivalEndDate   = to;
     }
 
     const results = await this.getAll<unknown>("/reservations", query);
@@ -148,8 +163,8 @@ export class HostawayAdapter implements PMSAdapter {
         externalId: String(res.id ?? ""),
         propertyExternalId: String(res.listingId ?? ""),
         status: STATUS_MAP[rawStatus] ?? rawStatus,
-        checkIn: new Date(Number(res.arrivalDate) * 1000).toISOString().split("T")[0],
-        checkOut: new Date(Number(res.departureDate) * 1000).toISOString().split("T")[0],
+        checkIn: parseHostawayDate(res.arrivalDate),
+        checkOut: parseHostawayDate(res.departureDate),
         guests: Number(res.guestCount ?? 0),
         totalRevenue: Number(res.totalPrice ?? 0),
         platform: String(res.channelName ?? "direct"),
