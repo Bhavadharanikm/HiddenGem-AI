@@ -46,11 +46,13 @@ export async function POST(req: NextRequest) {
     .update({ sync_status: "running" })
     .in("id", connections.map((c) => c.id));
 
-  // Fire the Netlify background function — runs up to 15 min, not subject to serverless timeout
+  // Fire the Netlify background function — runs up to 15 min, not subject to serverless timeout.
+  // Only attempt this in a real Netlify environment; localhost would 404 and mark all connections as error.
   const siteUrl = process.env.URL ?? process.env.NEXT_PUBLIC_SITE_URL;
   const cronSecret = process.env.CRON_SECRET;
+  const isNetlify = !!process.env.NETLIFY || (!!siteUrl && !siteUrl.includes("localhost") && !siteUrl.includes("127.0.0.1"));
 
-  if (siteUrl && cronSecret) {
+  if (isNetlify && siteUrl && cronSecret) {
     const connIds = connections.map((c) => c.id);
     fetch(`${siteUrl}/.netlify/functions/pms-sync-bg-background`, {
       method: "POST",

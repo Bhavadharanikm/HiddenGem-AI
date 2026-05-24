@@ -36,7 +36,7 @@ const lbl   = "text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-6
 const btn   = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2";
 
 type KDoc = { id: string; name: string; google_doc_url: string; mime_type: string | null; status: "pending"|"processing"|"ready"|"error"; error_msg?: string | null; last_modified_at: string | null; created_at: string };
-type PmsCon = { id: string; provider: string; last_sync_at: string | null; sync_status: string; is_active: boolean };
+type PmsCon = { id: string; provider: string; last_sync_at: string | null; sync_status: string; is_active: boolean; last_error?: string | null };
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "ready")  return <span className="text-[12px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">ready</span>;
@@ -381,14 +381,19 @@ function PmsTab({ clientId }: { clientId: string }) {
               {syncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} strokeWidth={2.5} />}
               {syncing ? "Syncing in background…" : "Sync now"}
             </button>
-            <button onClick={() => setForm(true)} className="text-[12px] text-slate-500 hover:text-slate-600 underline underline-offset-2 transition-colors">Update credentials</button>
+            <button onClick={() => setForm(true)} className="text-[12px] text-slate-500 hover:text-slate-600 underline underline-offset-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 rounded">Update credentials</button>
           </div>
           {syncOk && <p className="text-[12px] text-[#30d158] font-medium">Sync completed successfully.</p>}
-          {syncErr && <p className="text-[12px] text-red-500">{syncErr}</p>}
+          {syncErr && (
+            <div className="space-y-1">
+              <p className="text-[12px] text-red-500">{syncErr}</p>
+              {con?.last_error && <p className="text-[11px] text-red-400 font-mono break-all">{con.last_error}</p>}
+            </div>
+          )}
           {syncStalled && (
             <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 space-y-1.5">
               <p className="text-[12px] text-amber-700 font-medium">Sync is running in the background — this can take several minutes for large accounts.</p>
-              <button onClick={resetSync} className="text-[12px] text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors">Reset sync status</button>
+              <button onClick={resetSync} className="text-[12px] text-amber-700 underline underline-offset-2 hover:text-amber-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 rounded">Reset sync status</button>
             </div>
           )}
         </div>
@@ -522,7 +527,7 @@ function MetaTab({ clientId }: { clientId: string }) {
               </div>
               <button
                 onClick={() => setShowTokenInput(true)}
-                className="text-[12px] text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap flex-shrink-0 underline underline-offset-2"
+                className="text-[12px] text-slate-500 hover:text-slate-700 transition-colors whitespace-nowrap flex-shrink-0 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 rounded"
               >
                 Change
               </button>
@@ -603,7 +608,7 @@ function MetaTab({ clientId }: { clientId: string }) {
                 {assignment && (
                   <button
                     onClick={() => setAssignment(null)}
-                    className="text-[12px] text-slate-500 hover:text-slate-600 transition-colors underline underline-offset-2"
+                    className="text-[12px] text-slate-500 hover:text-slate-600 transition-colors underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 rounded"
                   >
                     Change
                   </button>
@@ -757,7 +762,7 @@ function GhlTab({ clientId, clientName }: { clientId: string; clientName: string
               <button
                 onClick={disconnect}
                 disabled={disconnecting}
-                className="flex items-center gap-1.5 text-[12px] text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 text-[12px] text-red-500 hover:text-red-700 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 rounded"
               >
                 {disconnecting ? <Loader2 size={12} className="animate-spin" /> : <Unlink size={12} />}
                 {disconnecting ? "Disconnecting…" : "Disconnect"}
@@ -826,7 +831,9 @@ function GhlTab({ clientId, clientName }: { clientId: string; clientName: string
                 <button
                   type="button"
                   onClick={() => setShowToken((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  aria-label={showToken ? "Hide token" : "Show token"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 rounded"
+                  tabIndex={-1}
                 >
                   {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
@@ -963,11 +970,22 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate, onD
         </span>
       </div>
 
-      <div className="flex items-center border-b border-[var(--border)] mb-5 flex-shrink-0 overflow-x-auto">
-        {TABS.map((tab) => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+      <div role="tablist" aria-label="Client settings" className="flex items-center border-b border-[var(--border)] mb-5 flex-shrink-0 overflow-x-auto">
+        {TABS.map((tab, idx) => (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") { e.preventDefault(); setActiveTab(TABS[(idx + 1) % TABS.length].id); }
+              if (e.key === "ArrowLeft")  { e.preventDefault(); setActiveTab(TABS[(idx - 1 + TABS.length) % TABS.length].id); }
+              if (e.key === "Home")       { e.preventDefault(); setActiveTab(TABS[0].id); }
+              if (e.key === "End")        { e.preventDefault(); setActiveTab(TABS[TABS.length - 1].id); }
+            }}
             className={cn("text-[12px] px-3 py-2.5 whitespace-nowrap border-b-2 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-inset",
-              activeTab === tab.id ? "text-[var(--brand)] border-[var(--brand)]" : "text-slate-500 hover:text-slate-800 border-transparent")}>
+              activeTab === tab.id ? "text-[var(--brand)] border-[var(--brand)]" : "text-slate-500 hover:text-slate-800 border-transparent")}
+          >
             {tab.label}
           </button>
         ))}

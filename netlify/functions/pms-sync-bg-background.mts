@@ -156,7 +156,7 @@ export default async function handler(req: Request) {
       console.error(`[pms-sync-bg] ${conn.provider} connection ${conn.id} — FAILED:`, msg);
       await db
         .from("pms_connections")
-        .update({ sync_status: "error" })
+        .update({ sync_status: "error", last_error: msg.slice(0, 500) })
         .eq("id", conn.id);
     }
   }

@@ -73,7 +73,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
@@ -176,7 +176,6 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
       </div>
 
       <p className="hidden sm:flex items-center gap-1 mt-1.5 text-[11px] text-slate-400 select-none" aria-hidden="true">
-        <kbd className="inline-flex items-center gap-0.5 font-sans">⌘</kbd>
         <kbd className="inline-flex items-center gap-0.5 font-sans">↵</kbd>
         <span>to send</span>
       </p>

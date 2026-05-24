@@ -24,12 +24,25 @@ function parseHostawayDate(val: unknown): string {
 }
 
 const STATUS_MAP: Record<string, string> = {
-  new:        "confirmed",
-  modified:   "confirmed",
-  cancelled:  "cancelled",
-  blocked:    "blocked",
-  inquiry:    "inquiry",
-  declined:   "cancelled",
+  new:           "confirmed",
+  modified:      "confirmed",
+  accepted:      "confirmed",
+  confirmed:     "confirmed",
+  reserved:      "confirmed",
+  booked:        "confirmed",
+  checkedIn:     "checked_in",
+  checked_in:    "checked_in",
+  checkedOut:    "checked_out",
+  checked_out:   "checked_out",
+  cancelled:     "cancelled",
+  canceled:      "cancelled",
+  declined:      "cancelled",
+  blocked:       "blocked",
+  ownerBlock:    "blocked",
+  ownerStay:     "blocked",
+  maintenance:   "blocked",
+  inquiry:       "inquiry",
+  request:       "inquiry",
 };
 
 export class HostawayAdapter implements PMSAdapter {
@@ -121,6 +134,24 @@ export class HostawayAdapter implements PMSAdapter {
 
     return results.map((l: unknown) => {
       const listing = l as Record<string, unknown>;
+
+      // Amenities may be string[], object[] with {name}/{amenityName}, or missing
+      const rawAmenities = listing.amenities ?? listing.listingAmenities;
+      const amenities: string[] = Array.isArray(rawAmenities)
+        ? rawAmenities
+            .map((a: unknown) => {
+              if (typeof a === "string") return a;
+              const o = a as Record<string, unknown>;
+              return String(o.name ?? o.amenityName ?? o.amenityId ?? "");
+            })
+            .filter(Boolean)
+        : [];
+
+      // basePrice may live under several field names depending on Hostaway plan
+      const basePrice =
+        Number(listing.basePrice ?? listing.price ?? listing.baseRate ??
+               listing.pricePerNight ?? listing.weeklyRate ?? 0);
+
       return {
         externalId: String(listing.id ?? ""),
         name: String(listing.name ?? ""),
@@ -132,11 +163,11 @@ export class HostawayAdapter implements PMSAdapter {
           lat: Number(listing.lat ?? 0),
           lng: Number(listing.lng ?? 0),
         },
-        bedrooms: Number(listing.bedroomsNumber ?? 0),
-        bathrooms: Number(listing.bathroomsNumber ?? 0),
-        amenities: Array.isArray(listing.amenities) ? listing.amenities.map(String) : [],
-        basePrice: Number(listing.basePrice ?? 0),
-        currency: String(listing.currencyCode ?? "USD"),
+        bedrooms: Number(listing.bedroomsNumber ?? listing.bedrooms ?? 0),
+        bathrooms: Number(listing.bathroomsNumber ?? listing.bathrooms ?? 0),
+        amenities,
+        basePrice,
+        currency: String(listing.currencyCode ?? listing.currency ?? "USD"),
         rawData: listing,
       };
     });
@@ -147,9 +178,9 @@ export class HostawayAdapter implements PMSAdapter {
     if (params?.since) {
       query.modifiedFrom = String(Math.floor(new Date(params.since).getTime() / 1000));
     } else {
-      // Full sync — 3 months back to 3 months forward
-      const from = params?.from ?? new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
-      const to   = params?.to   ?? new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0];
+      // Full sync: 12 months back to 12 months forward.
+      const from = params?.from ?? new Date(Date.now() - 365 * 86400000).toISOString().split("T")[0];
+      const to   = params?.to   ?? new Date(Date.now() + 365 * 86400000).toISOString().split("T")[0];
       query.arrivalStartDate = from;
       query.arrivalEndDate   = to;
     }
@@ -158,16 +189,20 @@ export class HostawayAdapter implements PMSAdapter {
 
     return results.map((r: unknown) => {
       const res = r as Record<string, unknown>;
-      const rawStatus = String(res.status ?? "");
+      const rawStatus = String(res.status ?? res.reservationStatus ?? "");
+      // listingId is the standard field; fall back to channelListingId or unitId
+      const propertyExternalId = String(
+        res.listingId ?? res.channelListingId ?? res.unitId ?? res.propertyId ?? ""
+      );
       return {
-        externalId: String(res.id ?? ""),
-        propertyExternalId: String(res.listingId ?? ""),
-        status: STATUS_MAP[rawStatus] ?? rawStatus,
-        checkIn: parseHostawayDate(res.arrivalDate),
-        checkOut: parseHostawayDate(res.departureDate),
-        guests: Number(res.guestCount ?? 0),
-        totalRevenue: Number(res.totalPrice ?? 0),
-        platform: String(res.channelName ?? "direct"),
+        externalId: String(res.id ?? res.reservationId ?? ""),
+        propertyExternalId,
+        status: STATUS_MAP[rawStatus] ?? (rawStatus || "confirmed"),
+        checkIn:  parseHostawayDate(res.arrivalDate ?? res.checkIn ?? res.checkInDate),
+        checkOut: parseHostawayDate(res.departureDate ?? res.checkOut ?? res.checkOutDate),
+        guests: Number(res.guestCount ?? res.numberOfGuests ?? res.adults ?? 0),
+        totalRevenue: Number(res.totalPrice ?? res.price ?? res.amount ?? 0),
+        platform: String(res.channelName ?? res.source ?? res.channel ?? "direct"),
         rawData: res,
       };
     });

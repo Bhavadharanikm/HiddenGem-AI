@@ -265,7 +265,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
           <>
             <div>
               <label className={labelClass}>Client name</label>
-              <input value={name} onChange={(e) => handleNameChange(e.target.value)} placeholder="e.g. Paradise Point" className={fieldClass} />
+              <input value={name} onChange={(e) => handleNameChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !creating && name.trim()) handleCreate(); }} placeholder="e.g. Paradise Point" className={fieldClass} autoFocus />
             </div>
             {createError && <p className="text-[12px] text-red-500">{createError}</p>}
           </>
@@ -432,10 +432,35 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
 
   useEffect(() => {
     if (!open) return;
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") { onClose(); return; }
+      if (e.key === "Tab") {
+        const panel = panelRef.current;
+        if (!panel) return;
+        const focusable = Array.from(panel.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+        ));
+        if (!focusable.length) return;
+        const first = focusable[0];
+        const last  = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault(); last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault(); first.focus();
+        }
+      }
+    }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open || !panelRef.current) return;
+    const el = panelRef.current.querySelector<HTMLElement>(
+      'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+    );
+    el?.focus();
+  }, [open]);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -486,8 +511,8 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 md:p-8" role="dialog" aria-modal="true" aria-label="Settings">
-      {/* Backdrop */}
-      <button type="button" aria-label="Close settings" className="absolute inset-0 w-full h-full bg-slate-900/40 backdrop-blur-sm border-0 cursor-pointer" onClick={onClose} />
+      {/* Backdrop — not in tab order; focus trap keeps focus inside panel */}
+      <button type="button" aria-label="Close settings" tabIndex={-1} className="absolute inset-0 w-full h-full bg-slate-900/40 backdrop-blur-sm border-0 cursor-pointer" onClick={onClose} />
 
       {/* Panel */}
       <div

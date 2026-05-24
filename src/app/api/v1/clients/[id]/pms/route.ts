@@ -21,7 +21,7 @@ export async function GET(
 
   const { data, error } = await db
     .from("pms_connections")
-    .select("id, provider, last_sync_at, sync_status, is_active")
+    .select("id, provider, last_sync_at, sync_status, is_active, last_error")
     .eq("tenant_id", id)
     .maybeSingle();
 
