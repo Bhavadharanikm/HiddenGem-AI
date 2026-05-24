@@ -15,6 +15,18 @@ function getDb() {
   );
 }
 
+// MCP session headers that must be forwarded in both directions.
+const MCP_PASSTHROUGH_HEADERS = ["mcp-session-id", "last-event-id"];
+
+function forwardMcpHeaders(from: Headers): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const h of MCP_PASSTHROUGH_HEADERS) {
+    const v = from.get(h);
+    if (v) out[h] = v;
+  }
+  return out;
+}
+
 // Anthropic calls this proxy with: Authorization: Bearer <CRON_SECRET>
 // We look up the tenant's GHL credentials and forward with proper headers.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ tenantId: string }> }) {
@@ -45,6 +57,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ten
       "Accept": "application/json, text/event-stream",
       "Authorization": `Bearer ${accessToken}`,
       "locationId": conn.location_id,
+      // Forward session-continuity headers from Anthropic → GHL
+      ...forwardMcpHeaders(req.headers),
     },
     body,
   });
@@ -52,7 +66,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ten
   const contentType = ghlRes.headers.get("Content-Type") ?? "application/json";
   return new Response(ghlRes.body, {
     status: ghlRes.status,
-    headers: { "Content-Type": contentType },
+    headers: {
+      "Content-Type": contentType,
+      // Forward session-continuity headers from GHL → Anthropic
+      ...forwardMcpHeaders(ghlRes.headers),
+    },
   });
 }
 
@@ -86,12 +104,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ tena
       "Accept": "application/json, text/event-stream",
       "Authorization": `Bearer ${accessToken}`,
       "locationId": conn.location_id,
+      ...forwardMcpHeaders(req.headers),
     },
   });
 
   const contentType = ghlRes.headers.get("Content-Type") ?? "application/json";
   return new Response(ghlRes.body, {
     status: ghlRes.status,
-    headers: { "Content-Type": contentType },
+    headers: {
+      "Content-Type": contentType,
+      ...forwardMcpHeaders(ghlRes.headers),
+    },
   });
 }
