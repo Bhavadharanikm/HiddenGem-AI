@@ -111,35 +111,39 @@ export default async function handler(req: Request) {
         }
       }
 
-      // ── Derived metrics: daily for last 365 days, monthly for older history ─
-      const metricsNow = new Date();
-      const metricDates: string[] = [];
-      // Daily — last 365 days
-      for (let d = 0; d < 365; d++) {
-        const dt = new Date(metricsNow);
-        dt.setDate(dt.getDate() - d);
-        metricDates.push(dt.toISOString().split("T")[0]);
+      // ── Derived metrics: daily for last 90 days, monthly for historical context ─
+      // Batched conservatively (10 concurrent) to avoid overwhelming the DB connection pool.
+      try {
+        const metricsNow = new Date();
+        const metricDates: string[] = [];
+        // Daily — last 90 days (covers the AI's default 90-day analytics window)
+        for (let d = 0; d < 90; d++) {
+          const dt = new Date(metricsNow);
+          dt.setDate(dt.getDate() - d);
+          metricDates.push(dt.toISOString().split("T")[0]);
+        }
+        // Monthly — months 4–48 ago (bridge from 90-day daily window back 4 years)
+        for (let m = 4; m <= 48; m++) {
+          const dt = new Date(metricsNow.getFullYear(), metricsNow.getMonth() - m, 1);
+          metricDates.push(dt.toISOString().split("T")[0]);
+        }
+        let metricErrors = 0;
+        for (let i = 0; i < metricDates.length; i += 10) {
+          await Promise.all(
+            metricDates.slice(i, i + 10).map((date) =>
+              db
+                .rpc("upsert_pms_derived_metrics", { p_tenant_id: tenantId, p_date: date })
+                .then(
+                  () => {},
+                  (err) => { metricErrors++; if (metricErrors <= 3) console.error("[pms-sync-bg] metric RPC failed for", date, err); }
+                )
+            )
+          );
+        }
+        if (metricErrors > 0) console.warn(`[pms-sync-bg] ${metricErrors} metric dates failed for tenant ${tenantId}`);
+      } catch (metricErr) {
+        console.error("[pms-sync-bg] metric loop threw unexpectedly:", metricErr);
       }
-      // Monthly — months 13–48 ago (historical context)
-      for (let m = 13; m <= 48; m++) {
-        const dt = new Date(metricsNow.getFullYear(), metricsNow.getMonth() - m, 1);
-        metricDates.push(dt.toISOString().split("T")[0]);
-      }
-      // Batch in groups of 50 to avoid overwhelming the DB
-      let metricErrors = 0;
-      for (let i = 0; i < metricDates.length; i += 50) {
-        await Promise.all(
-          metricDates.slice(i, i + 50).map((date) =>
-            db
-              .rpc("upsert_pms_derived_metrics", { p_tenant_id: tenantId, p_date: date })
-              .then(
-                () => {},
-                (err) => { metricErrors++; if (metricErrors <= 3) console.error("[pms-sync-bg] metric RPC failed for", date, err); }
-              )
-          )
-        );
-      }
-      if (metricErrors > 0) console.warn(`[pms-sync-bg] ${metricErrors} metric dates failed for tenant ${tenantId}`);
 
       await db
         .from("pms_connections")

@@ -120,28 +120,27 @@ export async function POST(req: NextRequest) {
             }
             totalBookings += bookingRows.length;
           }
-          // Derived metrics: daily for last 365 days, monthly for older history
-          const metricsNow = new Date();
-          const metricDates: string[] = [];
-          // Daily — last 365 days
-          for (let d = 0; d < 365; d++) {
-            const dt = new Date(metricsNow);
-            dt.setDate(dt.getDate() - d);
-            metricDates.push(dt.toISOString().split("T")[0]);
-          }
-          // Monthly — months 13–48 ago (historical context)
-          for (let m = 13; m <= 48; m++) {
-            const dt = new Date(metricsNow.getFullYear(), metricsNow.getMonth() - m, 1);
-            metricDates.push(dt.toISOString().split("T")[0]);
-          }
-          // Batch in groups of 50 to avoid overwhelming the DB
-          for (let i = 0; i < metricDates.length; i += 50) {
-            await Promise.all(
-              metricDates.slice(i, i + 50).map((date) =>
-                db.rpc("upsert_pms_derived_metrics", { p_tenant_id: tenantId, p_date: date }).then(() => {}, () => {})
-              )
-            );
-          }
+          // Derived metrics: daily for last 90 days, monthly for historical context
+          try {
+            const metricsNow = new Date();
+            const metricDates: string[] = [];
+            for (let d = 0; d < 90; d++) {
+              const dt = new Date(metricsNow);
+              dt.setDate(dt.getDate() - d);
+              metricDates.push(dt.toISOString().split("T")[0]);
+            }
+            for (let m = 4; m <= 48; m++) {
+              const dt = new Date(metricsNow.getFullYear(), metricsNow.getMonth() - m, 1);
+              metricDates.push(dt.toISOString().split("T")[0]);
+            }
+            for (let i = 0; i < metricDates.length; i += 10) {
+              await Promise.all(
+                metricDates.slice(i, i + 10).map((date) =>
+                  db.rpc("upsert_pms_derived_metrics", { p_tenant_id: tenantId, p_date: date }).then(() => {}, () => {})
+                )
+              );
+            }
+          } catch { /* metric errors don't fail the sync */ }
           await db.from("pms_connections").update({ sync_status: "idle", last_sync_at: new Date().toISOString() }).eq("id", conn.id);
         } catch (err) {
           console.error(`[pms/sync] connection ${conn.id}:`, err);
