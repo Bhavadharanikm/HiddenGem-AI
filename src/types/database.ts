@@ -268,6 +268,47 @@ export type Database = {
           },
         ]
       }
+      ghl_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          is_active: boolean
+          location_id: string
+          location_name: string | null
+          tenant_id: string  // UUID in DB
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_id: string
+          location_name?: string | null
+          tenant_id: string  // UUID in DB
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string
+          location_name?: string | null
+          tenant_id?: string  // UUID in DB
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ghl_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_drive_connections: {
         Row: {
           access_token: string

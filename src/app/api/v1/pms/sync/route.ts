@@ -22,12 +22,22 @@ export async function POST(req: NextRequest) {
 
   const { data: connections } = await db
     .from("pms_connections")
-    .select("id, provider, credentials, last_sync_at")
+    .select("id, provider, credentials, last_sync_at, sync_status")
     .eq("tenant_id", tenantId)
     .eq("is_active", true);
 
   if (!connections?.length) {
     return ok({ started: false, message: "No active PMS connections" });
+  }
+
+  // Skip if a sync started within the last 20 minutes to prevent concurrent runs
+  const LOCK_WINDOW_MS = 20 * 60 * 1000;
+  const alreadyRunning = connections.some(
+    (c) => c.sync_status === "running" && c.last_sync_at &&
+      Date.now() - new Date(c.last_sync_at).getTime() < LOCK_WINDOW_MS
+  );
+  if (alreadyRunning) {
+    return ok({ started: false, message: "Sync already in progress" });
   }
 
   // Mark all connections as running immediately

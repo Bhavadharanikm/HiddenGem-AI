@@ -44,16 +44,17 @@ export async function executeGetPmsData(
       let query = db
         .from("pms_bookings")
         .select(
-          "external_id, status, check_in, check_out, guests, total_revenue, platform"
+          "external_id, status, check_in, check_out, guests, total_revenue, platform, property:pms_properties(name, external_id)"
         )
         .eq("tenant_id", tenantId)
+        .in("status", ["confirmed", "checked_in", "checked_out"])
         .order("check_in", { ascending: false })
         .limit(limit);
 
       if (input.date_range) {
         query = query
           .gte("check_in", input.date_range.start)
-          .lte("check_out", input.date_range.end);
+          .lte("check_in", input.date_range.end);
       }
 
       const { data, error } = await query;
@@ -67,11 +68,11 @@ export async function executeGetPmsData(
 
       const { data, error } = await db
         .from("pms_bookings")
-        .select("total_revenue, check_in, check_out, platform")
+        .select("total_revenue, check_in, platform")
         .eq("tenant_id", tenantId)
         .eq("status", "confirmed")
         .gte("check_in", start)
-        .lte("check_out", end);
+        .lte("check_in", end);
 
       if (error) throw new Error(error.message);
       const bookings = data ?? [];
@@ -97,10 +98,26 @@ export async function executeGetPmsData(
         .eq("tenant_id", tenantId)
         .in("metric_type", ["occupancy_rate", "adr", "revpar", "total_revenue"])
         .order("metric_date", { ascending: false })
-        .limit(150);
+        .limit(200);
 
       if (error) throw new Error(error.message);
-      return { metrics: data ?? [] };
+
+      // Reshape flat rows into monthly objects so the AI doesn't misread them as daily data
+      const byMonth: Record<string, Record<string, number | null>> = {};
+      for (const row of data ?? []) {
+        const month = row.metric_date.slice(0, 7); // "YYYY-MM"
+        if (!byMonth[month]) byMonth[month] = {};
+        byMonth[month][row.metric_type] = row.metric_value;
+      }
+
+      const monthly_metrics = Object.entries(byMonth)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([month, metrics]) => ({ month, ...metrics }));
+
+      return {
+        note: "These are monthly aggregates computed from confirmed bookings.",
+        monthly_metrics,
+      };
     }
 
     case "reviews": {
@@ -118,7 +135,7 @@ export async function executeGetPmsData(
     case "properties": {
       const { data, error } = await db
         .from("pms_properties")
-        .select("name, bedrooms, bathrooms, amenities, base_price, currency")
+        .select("external_id, name, bedrooms, bathrooms, amenities, base_price, currency")
         .eq("tenant_id", tenantId)
         .limit(limit);
 

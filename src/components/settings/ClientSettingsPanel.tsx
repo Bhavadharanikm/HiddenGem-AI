@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Check, Loader2, ToggleLeft, ToggleRight, FileText, Trash2, X, Plus, RefreshCw, Key, Eye, EyeOff, Zap, LogIn, Infinity } from "lucide-react";
+import { Check, Loader2, ToggleLeft, ToggleRight, FileText, Trash2, X, Plus, RefreshCw, Key, Eye, EyeOff, Zap, LogIn, Infinity, Link2, Unlink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ClientRecord = {
@@ -23,10 +23,11 @@ function toSlug(n: string) { return n.toLowerCase().replace(/[^a-z0-9\s-]/g, "")
 function formatDate(d: string | null) { return d ? new Date(d).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : null; }
 function formatDateTime(d: string | null) { return d ? new Date(d).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : null; }
 
-type Tab = "general" | "knowledge" | "pms" | "meta" | "performance" | "audiences";
+type Tab = "general" | "knowledge" | "pms" | "meta" | "ghl" | "performance" | "audiences";
 const TABS: { id: Tab; label: string }[] = [
   { id: "general", label: "General" }, { id: "knowledge", label: "Knowledge Base" },
   { id: "pms", label: "PMS Data" }, { id: "meta", label: "Meta Ads" },
+  { id: "ghl", label: "GoHighLevel" },
   { id: "performance", label: "Performance" }, { id: "audiences", label: "Audiences" },
 ];
 
@@ -776,6 +777,182 @@ function MetaTab({ clientId }: { clientId: string }) {
   );
 }
 
+type GhlConn = { id: string; location_id: string; location_name: string | null; is_active: boolean; updated_at: string };
+
+function GhlTab({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const [loading, setLoading]       = useState(true);
+  const [conn, setConn]             = useState<GhlConn | null>(null);
+  const [locationId, setLocationId] = useState("");
+  const [accessToken, setAccessToken] = useState("");
+  const [locationName, setLocationName] = useState(clientName);
+  const [showToken, setShowToken]   = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [err, setErr]               = useState<string | null>(null);
+  const [ok, setOk]                 = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true); setErr(null);
+    try {
+      const r = await fetch(`/api/v1/ghl?tenant_id=${clientId}`, { headers: { "X-Dashboard-Session": "1" } });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Failed to load");
+      setConn(j.connection ?? null);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed to load"); }
+    finally { setLoading(false); }
+  }, [clientId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function save() {
+    if (!locationId.trim()) { setErr("Location ID is required"); return; }
+    if (!accessToken.trim()) { setErr("Access token is required"); return; }
+    setSaving(true); setErr(null); setOk(false);
+    try {
+      const r = await fetch(`/api/v1/ghl?tenant_id=${clientId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Dashboard-Session": "1" },
+        body: JSON.stringify({ location_id: locationId, access_token: accessToken, location_name: locationName || undefined }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "Failed to connect");
+      setConn(j.connection ?? null); setOk(true); setLocationId(""); setAccessToken(""); setLocationName(clientName);
+      setTimeout(() => setOk(false), 3000);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed to connect"); }
+    finally { setSaving(false); }
+  }
+
+  async function disconnect() {
+    setDisconnecting(true); setErr(null);
+    try {
+      await fetch(`/api/v1/ghl?tenant_id=${clientId}`, { method: "DELETE", headers: { "X-Dashboard-Session": "1" } });
+      setConn(null);
+    } catch (e) { setErr(e instanceof Error ? e.message : "Failed to disconnect"); }
+    finally { setDisconnecting(false); }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-[14px] font-semibold text-slate-900">GoHighLevel CRM</h3>
+        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
+          Connect a GoHighLevel sub-account so the AI can look up contacts, conversations, opportunities, appointments, and more via the GoHighLevel MCP server.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 size={18} className="text-[var(--brand)] animate-spin" /></div>
+      ) : conn ? (
+        <div className="space-y-4">
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-semibold text-slate-600">GoHighLevel Sub-Account</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">connected</span>
+            </div>
+            {conn.location_name && (
+              <p className="text-[13px] font-medium text-slate-800">{conn.location_name}</p>
+            )}
+            <p className="text-[12px] text-slate-500">Location ID: <span className="font-mono text-slate-700">{conn.location_id}</span></p>
+            <p className="text-[11px] text-slate-400">Last updated: {formatDateTime(conn.updated_at)}</p>
+
+            <div className="pt-1">
+              <button
+                onClick={disconnect}
+                disabled={disconnecting}
+                className="flex items-center gap-1.5 text-[12px] text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+              >
+                {disconnecting ? <Loader2 size={12} className="animate-spin" /> : <Unlink size={12} />}
+                {disconnecting ? "Disconnecting…" : "Disconnect"}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-2 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
+            <p className="text-[12px] font-semibold text-slate-600 mb-1">Available via AI</p>
+            {[
+              "Contacts — create, search, update, tag",
+              "Conversations — search and send messages",
+              "Opportunities — pipeline and stage management",
+              "Appointments — calendar events and notes",
+              "Payments — orders and transactions",
+            ].map((cap) => (
+              <div key={cap} className="flex items-start gap-2">
+                <Check size={13} className="text-[#30d158] flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+                <span className="text-[12px] text-slate-700">{cap}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-4 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
+          <div>
+            <p className="text-[12px] font-semibold text-slate-600 mb-1">How to connect</p>
+            <ol className="space-y-1 text-[12px] text-slate-500 list-decimal list-inside leading-relaxed">
+              <li>In GoHighLevel → Settings → Private Integrations → create a new integration</li>
+              <li>Select scopes: contacts, conversations, opportunities, calendars, payments</li>
+              <li>Copy the token and your sub-account Location ID below</li>
+            </ol>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className={lbl}>Location name <span className="font-normal normal-case text-slate-400">(optional)</span></label>
+              <input
+                type="text"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+                placeholder="e.g. Sunrise Beach Villas"
+                className={field}
+              />
+            </div>
+            <div>
+              <label className={lbl}>Location ID</label>
+              <input
+                type="text"
+                value={locationId}
+                onChange={(e) => setLocationId(e.target.value)}
+                placeholder="e.g. abc123XYZ"
+                className={field}
+              />
+            </div>
+            <div>
+              <label className={lbl}>Private Integration Token</label>
+              <div className="relative">
+                <input
+                  type={showToken ? "text" : "password"}
+                  value={accessToken}
+                  onChange={(e) => setAccessToken(e.target.value)}
+                  placeholder="eyJ…"
+                  className={cn(field, "pr-10")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowToken((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {err && <p className="text-[12px] text-red-600">{err}</p>}
+          {ok  && <p className="text-[12px] text-[#30d158] font-medium">Connected successfully.</p>}
+
+          <button
+            onClick={save}
+            disabled={saving || !locationId.trim() || !accessToken.trim()}
+            className={cn(btn, "w-full sm:w-auto justify-center")}
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
+            {saving ? "Verifying…" : "Connect GoHighLevel"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PerformanceTab() {
   return (
     <div className="space-y-5">
@@ -835,6 +1012,7 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate, onD
         {activeTab === "knowledge"   && <KnowledgeTab clientId={client.id} />}
         {activeTab === "pms"         && <PmsTab clientId={client.id} />}
         {activeTab === "meta"        && <MetaTab clientId={client.id} />}
+        {activeTab === "ghl"         && <GhlTab clientId={client.id} clientName={client.name} />}
         {activeTab === "performance" && <PerformanceTab />}
         {activeTab === "audiences"   && <AudiencesTab />}
       </div>

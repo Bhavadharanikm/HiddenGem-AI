@@ -34,7 +34,7 @@ export default async function handler(req: Request) {
 
   const { data: connections } = await db
     .from("pms_connections")
-    .select("id, provider, credentials, last_sync_at")
+    .select("id, provider, credentials, last_sync_at, sync_status")
     .in("id", connectionIds);
 
   if (!connections?.length) return new Response("No connections found", { status: 404 });

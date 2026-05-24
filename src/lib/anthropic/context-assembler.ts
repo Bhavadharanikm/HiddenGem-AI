@@ -46,6 +46,13 @@ export async function assembleSystemPrompt(tenantId: string): Promise<string> {
     .limit(1)
     .maybeSingle();
 
+  const { data: ghlConn } = await db
+    .from("ghl_connections")
+    .select("location_name, location_id")
+    .eq("tenant_id", tenantId)
+    .eq("is_active", true)
+    .maybeSingle();
+
   const { count: docCount } = await db
     .from("knowledge_documents")
     .select("id", { count: "exact", head: true })
@@ -70,6 +77,7 @@ You have access to tools to retrieve:
 - **Meta Ads**: ${metaConn ? `Account connected (last synced: ${metaConn.last_sync_at ? new Date(metaConn.last_sync_at).toLocaleDateString() : "never"})` : "not connected"}
 - **Performance Metrics**: Occupancy, ADR, RevPAR, revenue trends
 - **Audience Assets**: Meta custom/lookalike audiences and campaign history
+- **GoHighLevel CRM**: ${ghlConn ? `Connected (${ghlConn.location_name ?? ghlConn.location_id}) — use GoHighLevel MCP tools to look up contacts, conversations, opportunities, appointments, and payments` : "not connected"}
 
 ## Behavior Guidelines
 - Always use tools to retrieve data before answering data-specific questions
