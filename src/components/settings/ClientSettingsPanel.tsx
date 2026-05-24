@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Check, Loader2, ToggleLeft, ToggleRight, FileText, Trash2, X, Plus, RefreshCw, Key, Eye, EyeOff, Zap, LogIn, Infinity, Link2, Unlink } from "lucide-react";
+import { Check, Loader2, ToggleLeft, ToggleRight, FileText, Trash2, X, Plus, RefreshCw, Key, Eye, EyeOff, Zap, LogIn, Infinity, Link2, Unlink, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ClientRecord = {
@@ -953,16 +953,84 @@ function GhlTab({ clientId, clientName }: { clientId: string; clientName: string
   );
 }
 
-function PerformanceTab() {
+type PerfStatus = {
+  pms: { connected: boolean; has_metrics: boolean; provider: string | null; last_sync_at: string | null };
+  meta: { connected: boolean; has_insights: boolean; account_name: string | null; last_sync_at: string | null };
+} | null;
+
+function PerformanceTab({ clientId }: { clientId: string }) {
+  const [status, setStatus] = useState<PerfStatus>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/v1/performance/status?clientId=${clientId}`, { headers: { "X-Dashboard-Session": "1" } })
+      .then((r) => r.json())
+      .then((j) => setStatus(j.data ?? null))
+      .catch(() => setStatus(null))
+      .finally(() => setLoading(false));
+  }, [clientId]);
+
+  const pmsOk   = status?.pms.connected && status.pms.has_metrics;
+  const pmsSoon = status?.pms.connected && !status.pms.has_metrics;
+  const metaOk  = status?.meta.connected && status.meta.has_insights;
+  const metaSoon = status?.meta.connected && !status.meta.has_insights;
+
+  const metrics: { label: string; desc: string; available: boolean; pending: boolean; hint: string }[] = [
+    { label: "Occupancy rate",          desc: "from PMS bookings",             available: !!pmsOk,  pending: !!pmsSoon,  hint: "Connect PMS Data" },
+    { label: "Average daily rate (ADR)", desc: "from PMS revenue",             available: !!pmsOk,  pending: !!pmsSoon,  hint: "Connect PMS Data" },
+    { label: "RevPAR",                  desc: "calculated from occupancy × ADR", available: !!pmsOk, pending: !!pmsSoon, hint: "Connect PMS Data" },
+    { label: "ROAS",                    desc: "from Meta Ads spend vs revenue", available: !!metaOk, pending: !!metaSoon, hint: "Connect Meta Ads" },
+    { label: "CTR & CPM",               desc: "from Meta Ads insights",         available: !!metaOk, pending: !!metaSoon, hint: "Connect Meta Ads" },
+  ];
+
   return (
     <div className="space-y-5">
-      <div><h3 className="text-[14px] font-semibold text-slate-900">Performance Data</h3><p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Metrics are automatically calculated from connected PMS and Meta Ads data.</p></div>
-      <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
-        {[["Occupancy rate", "from PMS bookings"], ["Average daily rate (ADR)", "from PMS revenue"], ["RevPAR", "calculated from occupancy × ADR"], ["ROAS", "from Meta Ads spend vs revenue"], ["CTR & CPM", "from Meta Ads insights"]].map(([l, d]) => (
-          <div key={l} className="flex items-start gap-2.5"><Check size={14} className="text-[#30d158] flex-shrink-0 mt-0.5" strokeWidth={2.5} /><div><span className="text-[12px] text-slate-800 font-medium">{l}</span><span className="text-[12px] text-slate-500"> — {d}</span></div></div>
-        ))}
+      <div>
+        <h3 className="text-[14px] font-semibold text-slate-900">Performance Data</h3>
+        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">Metrics are automatically calculated from connected PMS and Meta Ads data.</p>
       </div>
-      <p className="text-[12px] text-slate-500 leading-relaxed">Data refreshes every 2–4 hours once PMS and Meta Ads are connected.</p>
+
+      {loading ? (
+        <div className="flex justify-center py-10"><Loader2 size={18} className="text-[var(--brand)] animate-spin" /></div>
+      ) : (
+        <div className="bg-white border border-[var(--border)] rounded-2xl p-4 space-y-3 shadow-[0_4px_16px_rgba(15,23,42,0.04)]">
+          {metrics.map(({ label, desc, available, pending, hint }) => (
+            <div key={label} className="flex items-start gap-2.5">
+              {available ? (
+                <Check size={14} className="text-[#30d158] flex-shrink-0 mt-0.5" strokeWidth={2.5} />
+              ) : pending ? (
+                <Loader2 size={14} className="text-[var(--brand)] flex-shrink-0 mt-0.5 animate-spin" />
+              ) : (
+                <AlertCircle size={14} className="text-slate-300 flex-shrink-0 mt-0.5" strokeWidth={2} />
+              )}
+              <div>
+                <span className={cn("text-[12px] font-medium", available ? "text-slate-800" : "text-slate-400")}>{label}</span>
+                <span className={cn("text-[12px]", available ? "text-slate-500" : "text-slate-400")}> — {desc}</span>
+                {!available && !pending && (
+                  <span className="ml-2 text-[11px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-400 border border-slate-200">{hint}</span>
+                )}
+                {pending && (
+                  <span className="ml-2 text-[11px] text-[var(--brand)]">syncing…</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {status && (
+        <div className="space-y-1.5">
+          {status.pms.connected && status.pms.last_sync_at && (
+            <p className="text-[11px] text-slate-400">PMS last synced: {formatDateTime(status.pms.last_sync_at)}</p>
+          )}
+          {status.meta.connected && status.meta.last_sync_at && (
+            <p className="text-[11px] text-slate-400">Meta last synced: {formatDateTime(status.meta.last_sync_at)}</p>
+          )}
+          {(!status.pms.connected || !status.meta.connected) && (
+            <p className="text-[12px] text-slate-500 leading-relaxed">Data refreshes every 2–4 hours once PMS and Meta Ads are connected.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1013,7 +1081,7 @@ export default function ClientSettingsPanel({ client, clientIndex, onUpdate, onD
         {activeTab === "pms"         && <PmsTab clientId={client.id} />}
         {activeTab === "meta"        && <MetaTab clientId={client.id} />}
         {activeTab === "ghl"         && <GhlTab clientId={client.id} clientName={client.name} />}
-        {activeTab === "performance" && <PerformanceTab />}
+        {activeTab === "performance" && <PerformanceTab clientId={client.id} />}
         {activeTab === "audiences"   && <AudiencesTab />}
       </div>
     </div>
