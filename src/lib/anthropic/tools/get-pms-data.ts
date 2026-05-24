@@ -92,31 +92,36 @@ export async function executeGetPmsData(
     }
 
     case "occupancy": {
+      const start = input.date_range?.start ?? new Date(Date.now() - 90 * 86400000).toISOString().split("T")[0];
+      const end   = input.date_range?.end   ?? new Date().toISOString().split("T")[0];
+
       const { data, error } = await db
         .from("performance_metrics")
         .select("metric_date, metric_type, metric_value")
         .eq("tenant_id", tenantId)
         .in("metric_type", ["occupancy_rate", "adr", "revpar", "total_revenue"])
+        .gte("metric_date", start)
+        .lte("metric_date", end)
         .order("metric_date", { ascending: false })
-        .limit(200);
+        .limit(Math.max(limit, 400)); // 90 days × 4 metrics = 360 rows minimum
 
       if (error) throw new Error(error.message);
 
-      // Reshape flat rows into monthly objects so the AI doesn't misread them as daily data
-      const byMonth: Record<string, Record<string, number | null>> = {};
+      // Reshape flat rows into per-day objects
+      const byDay: Record<string, Record<string, number | null>> = {};
       for (const row of data ?? []) {
-        const month = row.metric_date.slice(0, 7); // "YYYY-MM"
-        if (!byMonth[month]) byMonth[month] = {};
-        byMonth[month][row.metric_type] = row.metric_value;
+        if (!byDay[row.metric_date]) byDay[row.metric_date] = {};
+        byDay[row.metric_date][row.metric_type] = row.metric_value;
       }
 
-      const monthly_metrics = Object.entries(byMonth)
+      const daily_metrics = Object.entries(byDay)
         .sort(([a], [b]) => b.localeCompare(a))
-        .map(([month, metrics]) => ({ month, ...metrics }));
+        .map(([date, metrics]) => ({ date, ...metrics }));
 
       return {
-        note: "These are monthly aggregates computed from confirmed bookings.",
-        monthly_metrics,
+        note: "Daily metrics computed from confirmed bookings.",
+        period: { start, end },
+        daily_metrics,
       };
     }
 

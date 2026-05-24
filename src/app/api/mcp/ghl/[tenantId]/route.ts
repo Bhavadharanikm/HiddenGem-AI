@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { decryptToken } from "@/lib/crypto/credentials";
 
+// Edge runtime: no function timeout, required for SSE streaming to Anthropic's MCP client
+export const runtime = "edge";
+
 const GHL_MCP_URL = "https://services.leadconnectorhq.com/mcp/";
 
 function getDb() {
@@ -46,12 +49,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ten
     body,
   });
 
-  const responseBody = await ghlRes.arrayBuffer();
-  return new Response(responseBody, {
+  const contentType = ghlRes.headers.get("Content-Type") ?? "application/json";
+  return new Response(ghlRes.body, {
     status: ghlRes.status,
-    headers: {
-      "Content-Type": ghlRes.headers.get("Content-Type") ?? "application/json",
-    },
+    headers: { "Content-Type": contentType },
   });
 }
 
@@ -82,16 +83,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ tena
   const ghlRes = await fetch(url.toString(), {
     method: "GET",
     headers: {
+      "Accept": "application/json, text/event-stream",
       "Authorization": `Bearer ${accessToken}`,
       "locationId": conn.location_id,
     },
   });
 
-  const responseBody = await ghlRes.arrayBuffer();
-  return new Response(responseBody, {
+  const contentType = ghlRes.headers.get("Content-Type") ?? "application/json";
+  return new Response(ghlRes.body, {
     status: ghlRes.status,
-    headers: {
-      "Content-Type": ghlRes.headers.get("Content-Type") ?? "application/json",
-    },
+    headers: { "Content-Type": contentType },
   });
 }
