@@ -417,7 +417,6 @@ function MetaTab({ clientId }: { clientId: string }) {
   const [status, setStatus]               = useState<MetaStatus>({ connected: false, accounts: [] });
   const [assignment, setAssignment]       = useState<MetaAssignment>(null);
   const [selectedId, setSelectedId]       = useState("");
-  const [connecting, setConnecting]       = useState(false);
   const [assigning, setAssigning]         = useState(false);
   const [syncing, setSyncing]             = useState(false);
   const [syncOk, setSyncOk]               = useState(false);
@@ -442,19 +441,6 @@ function MetaTab({ clientId }: { clientId: string }) {
   }, [clientId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
-
-  async function connect() {
-    setConnecting(true); setErr(null);
-    try {
-      const r = await fetch("/api/v1/meta-ads/connect", { headers: { "X-Dashboard-Session": "1" } });
-      const j = await r.json();
-      if (!r.ok || !j.data?.auth_url) throw new Error(j.error?.message ?? j.error ?? "Failed to get auth URL");
-      window.location.href = j.data.auth_url;
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to connect");
-      setConnecting(false);
-    }
-  }
 
   async function saveSystemToken() {
     if (!systemToken.trim()) return;
@@ -508,8 +494,6 @@ function MetaTab({ clientId }: { clientId: string }) {
     finally { setSyncing(false); }
   }
 
-  const isSystemToken = status.connected && !status.token_expires_at;
-
   return (
     <div className="space-y-5">
       <div>
@@ -525,37 +509,16 @@ function MetaTab({ clientId }: { clientId: string }) {
         <>
           {/* ── Connected status banner ───────────────────────────── */}
           {status.connected && !showTokenInput && (
-            <div className={cn(
-              "rounded-2xl border p-4 flex flex-col sm:flex-row sm:items-center gap-3",
-              isSystemToken
-                ? "bg-[rgba(48,209,88,0.06)] border-[rgba(48,209,88,0.22)]"
-                : "bg-[rgba(41,151,255,0.05)] border-[rgba(41,151,255,0.2)]"
-            )}>
-              <div className={cn(
-                "flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0",
-                isSystemToken ? "bg-[rgba(48,209,88,0.15)]" : "bg-[rgba(41,151,255,0.12)]"
-              )}>
-                {isSystemToken
-                  ? <Infinity size={16} className="text-[#30d158]" strokeWidth={2} />
-                  : <LogIn size={16} className="text-[var(--brand)]" strokeWidth={2} />}
+            <div className="rounded-2xl border bg-[rgba(48,209,88,0.06)] border-[rgba(48,209,88,0.22)] p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-xl flex-shrink-0 bg-[rgba(48,209,88,0.15)]">
+                <Infinity size={16} className="text-[#30d158]" strokeWidth={2} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[12px] font-semibold text-slate-800">
-                    {isSystemToken ? "System User Token" : "Facebook OAuth"}
-                  </span>
-                  <span className={cn(
-                    "text-[12px] font-semibold px-2 py-0.5 rounded-full border",
-                    isSystemToken
-                      ? "bg-[rgba(48,209,88,0.12)] text-[#30d158] border-[rgba(48,209,88,0.2)]"
-                      : "bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border-[rgba(41,151,255,0.2)]"
-                  )}>connected</span>
+                  <span className="text-[12px] font-semibold text-slate-800">System User Token</span>
+                  <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full border bg-[rgba(48,209,88,0.12)] text-[#30d158] border-[rgba(48,209,88,0.2)]">connected</span>
                 </div>
-                <p className="text-[12px] text-slate-500 mt-0.5">
-                  {isSystemToken
-                    ? "Permanent · never expires · covers all assigned ad accounts"
-                    : `Expires ${formatDate(status.token_expires_at ?? null) ?? "unknown"}`}
-                </p>
+                <p className="text-[12px] text-slate-500 mt-0.5">Permanent · never expires · covers all assigned ad accounts</p>
               </div>
               <button
                 onClick={() => setShowTokenInput(true)}
@@ -566,12 +529,11 @@ function MetaTab({ clientId }: { clientId: string }) {
             </div>
           )}
 
-          {/* ── Connection method picker (not connected, or changing) ── */}
+          {/* ── System token form (not connected, or changing) ── */}
           {(!status.connected || showTokenInput) && (
             <div className="space-y-3">
               {showTokenInput && status.connected && (
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-slate-700">Switch connection method</span>
+                <div className="flex items-center justify-end">
                   <button
                     onClick={() => { setShowTokenInput(false); setSystemToken(""); setErr(null); }}
                     className="flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-600 transition-colors"
@@ -581,119 +543,55 @@ function MetaTab({ clientId }: { clientId: string }) {
                 </div>
               )}
 
-              {/* Two method cards */}
-              {!showTokenInput && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* OAuth card */}
-                  <button
-                    onClick={connect}
-                    disabled={connecting}
-                    className="group text-left w-full bg-white border border-[var(--border)] hover:border-[rgba(41,151,255,0.4)] hover:shadow-[0_0_0_3px_rgba(41,151,255,0.08)] rounded-2xl p-4 transition-all disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-[rgba(41,151,255,0.1)] flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-[rgba(41,151,255,0.16)] transition-colors">
-                        {connecting ? <Loader2 size={16} className="text-[var(--brand)] animate-spin" /> : <LogIn size={16} className="text-[var(--brand)]" strokeWidth={2} />}
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-semibold text-slate-800 leading-tight">
-                          {connecting ? "Redirecting…" : "Facebook Login"}
-                        </p>
-                        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
-                          OAuth flow · re-auth every 60 days
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* System token card */}
-                  <button
-                    onClick={() => setShowTokenInput(true)}
-                    className="group text-left w-full bg-white border-2 border-[rgba(41,151,255,0.25)] hover:border-[var(--brand)] hover:shadow-[0_0_0_3px_rgba(41,151,255,0.1)] rounded-2xl p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 relative overflow-hidden"
-                  >
-                    <div className="absolute top-2.5 right-2.5">
-                      <span className="text-[12px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-[var(--brand)] text-white">
-                        Recommended
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-[rgba(41,151,255,0.12)] flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:bg-[rgba(41,151,255,0.2)] transition-colors">
-                        <Key size={16} className="text-[var(--brand)]" strokeWidth={2} />
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-semibold text-slate-800 leading-tight">System User Token</p>
-                        <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
-                          Permanent · one token · all accounts
-                        </p>
-                      </div>
-                    </div>
-                  </button>
+              <div className="bg-white border-2 border-[rgba(41,151,255,0.25)] rounded-2xl p-4 space-y-4 shadow-[0_4px_20px_rgba(41,151,255,0.08)]">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[rgba(41,151,255,0.1)] flex items-center justify-center flex-shrink-0">
+                    <Key size={16} className="text-[var(--brand)]" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold text-slate-800">System User Token</p>
+                    <p className="text-[12px] text-slate-500">Permanent · covers all assigned ad accounts</p>
+                  </div>
                 </div>
-              )}
 
-              {/* Token paste form */}
-              {showTokenInput && (
-                <div className="bg-white border-2 border-[rgba(41,151,255,0.25)] rounded-2xl p-4 space-y-4 shadow-[0_4px_20px_rgba(41,151,255,0.08)]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[rgba(41,151,255,0.1)] flex items-center justify-center flex-shrink-0">
-                      <Key size={16} className="text-[var(--brand)]" strokeWidth={2} />
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-semibold text-slate-800">System User Token</p>
-                      <p className="text-[12px] text-slate-500">Permanent · covers all assigned ad accounts</p>
-                    </div>
-                  </div>
+                <div className="bg-[rgba(41,151,255,0.04)] border border-[rgba(41,151,255,0.14)] rounded-xl px-3 py-2.5">
+                  <p className="text-[12px] text-slate-600 leading-relaxed">
+                    Generate this token in <strong className="text-slate-700">Meta Business Manager → System Users → Generate Token</strong>. Assign the system user to each client's ad account first.
+                  </p>
+                </div>
 
-                  <div className="bg-[rgba(41,151,255,0.04)] border border-[rgba(41,151,255,0.14)] rounded-xl px-3 py-2.5 space-y-1">
-                    <p className="text-[12px] text-slate-600 leading-relaxed">
-                      Generate this token in <strong className="text-slate-700">Meta Business Manager → System Users → Generate Token</strong>. Assign the system user to each client's ad account first.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className={lbl}>Access token</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={systemToken}
-                        onChange={(e) => setSystemToken(e.target.value)}
-                        placeholder="EAABwzL..."
-                        className={cn(field, "pr-10 font-mono text-[12px]")}
-                        autoComplete="off"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        aria-label={showPassword ? "Hide token" : "Show token"}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-2">
+                <div className="space-y-1.5">
+                  <label className={lbl}>Access token</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={systemToken}
+                      onChange={(e) => setSystemToken(e.target.value)}
+                      placeholder="EAABwzL..."
+                      className={cn(field, "pr-10 font-mono text-[12px]")}
+                      autoComplete="off"
+                    />
                     <button
-                      onClick={saveSystemToken}
-                      disabled={savingToken || !systemToken.trim()}
-                      className={cn(btn, "w-full sm:w-auto justify-center")}
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Hide token" : "Show token"}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
+                      tabIndex={-1}
                     >
-                      {savingToken ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.5} />}
-                      {savingToken ? "Validating…" : "Save token"}
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
-                    {!status.connected && (
-                      <button
-                        onClick={connect}
-                        disabled={connecting}
-                        className="flex items-center justify-center gap-1.5 text-[12px] font-semibold px-4 py-2 rounded-xl border border-[var(--border)] text-slate-600 hover:border-[rgba(41,151,255,0.3)] hover:text-slate-800 transition-all w-full sm:w-auto disabled:opacity-50"
-                      >
-                        {connecting ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={12} strokeWidth={2} />}
-                        {connecting ? "Redirecting…" : "Use Facebook Login instead"}
-                      </button>
-                    )}
                   </div>
                 </div>
-              )}
+
+                <button
+                  onClick={saveSystemToken}
+                  disabled={savingToken || !systemToken.trim()}
+                  className={cn(btn, "w-full sm:w-auto justify-center")}
+                >
+                  {savingToken ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} strokeWidth={2.5} />}
+                  {savingToken ? "Validating…" : "Save token"}
+                </button>
+              </div>
             </div>
           )}
 
