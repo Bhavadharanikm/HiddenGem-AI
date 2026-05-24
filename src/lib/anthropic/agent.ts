@@ -162,7 +162,10 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
           model: MODEL,
           max_tokens: 4096,
           system: systemBlocks,
-          tools: ALL_TOOLS as BetaToolUnion[],
+          tools: [
+            ...ALL_TOOLS as BetaToolUnion[],
+            { type: "mcp_toolset", mcp_server_name: "gohighlevel" } as BetaToolUnion,
+          ],
           mcp_servers: [ghlMcpServer],
           betas: [GHL_MCP_BETA],
           messages: messages as BetaMessageParam[],
@@ -331,7 +334,12 @@ export async function* runAgentStream(
             model: MODEL,
             max_tokens: 4096,
             system: streamSystem,
-            tools: dbEnabled ? (ALL_TOOLS as BetaToolUnion[]) : [],
+            tools: dbEnabled
+              ? [
+                  ...ALL_TOOLS as BetaToolUnion[],
+                  { type: "mcp_toolset", mcp_server_name: "gohighlevel" } as BetaToolUnion,
+                ]
+              : [{ type: "mcp_toolset", mcp_server_name: "gohighlevel" } as BetaToolUnion],
             mcp_servers: [ghlMcpServer],
             betas: [GHL_MCP_BETA],
             messages: messages as BetaMessageParam[],
