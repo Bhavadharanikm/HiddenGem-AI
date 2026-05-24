@@ -384,14 +384,11 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 mt-4 border-t border-[var(--border)] flex-shrink-0">
         {step === 0 && (
-          <>
-            <button onClick={onCancel} className={cn(ghostBtn, "flex items-center gap-1")}><X size={11} /> Cancel</button>
-            <button onClick={handleCreate} disabled={creating || !name.trim()} className={primaryBtn}>
-              {creating && <Loader2 size={11} className="animate-spin" />}
-              {creating ? "Creating…" : "Create client"}
-              {!creating && <ChevronRight size={12} />}
-            </button>
-          </>
+          <button onClick={handleCreate} disabled={creating || !name.trim()} className={cn(primaryBtn, "ml-auto")}>
+            {creating && <Loader2 size={11} className="animate-spin" />}
+            {creating ? "Creating…" : "Create client"}
+            {!creating && <ChevronRight size={12} />}
+          </button>
         )}
         {(step === 1 || step === 2) && (
           <>
