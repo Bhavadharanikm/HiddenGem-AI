@@ -4,19 +4,24 @@ import ChatInterface from "@/components/chat/ChatInterface";
 import { getServiceClient } from "@/lib/supabase/service";
 
 export default async function Home() {
-  const db = getServiceClient();
+  let clients: { id: string; name: string; slug: string }[] = [];
 
-  const { data: tenants } = await db
-    .from("tenants")
-    .select("id, name, slug")
-    .eq("is_active", true)
-    .order("name");
+  try {
+    const db = getServiceClient();
+    const { data: tenants } = await db
+      .from("tenants")
+      .select("id, name, slug")
+      .eq("is_active", true)
+      .order("name");
 
-  const clients = (tenants ?? []).map((t) => ({
-    id: t.id,
-    name: t.name,
-    slug: t.slug,
-  }));
+    clients = (tenants ?? []).map((t) => ({
+      id: t.id,
+      name: t.name,
+      slug: t.slug,
+    }));
+  } catch {
+    // Supabase not configured yet — render UI without clients
+  }
 
   return <ChatInterface initialClients={clients} />;
 }
