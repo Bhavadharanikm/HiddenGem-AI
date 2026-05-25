@@ -32,9 +32,9 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
       <table className="w-full text-[13px]">{children}</table>
     </div>
   ),
-  thead: ({ children }) => <thead className="bg-[rgba(41,151,255,0.06)] text-slate-600">{children}</thead>,
+  thead: ({ children }) => <thead className="bg-[rgba(47,102,229,0.06)] text-slate-600">{children}</thead>,
   tbody: ({ children }) => <tbody className="divide-y divide-[var(--border)]">{children}</tbody>,
-  tr: ({ children }) => <tr className="transition-colors hover:bg-[rgba(41,151,255,0.03)]">{children}</tr>,
+  tr: ({ children }) => <tr className="transition-colors hover:bg-[rgba(47,102,229,0.03)]">{children}</tr>,
   th: ({ children }) => <th className="px-3 py-2 text-left text-[12px] font-semibold uppercase tracking-wide text-slate-600">{children}</th>,
   td: ({ children }) => <td className="px-3 py-2 text-slate-700">{children}</td>,
   pre: ({ children }) => (
@@ -74,10 +74,10 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
                     key={i}
                     src={att.preview}
                     alt={att.name}
-                    className="h-24 w-24 rounded-xl object-cover border border-[rgba(41,151,255,0.2)] shadow-sm"
+                    className="h-24 w-24 rounded-xl object-cover border border-[rgba(47,102,229,0.2)] shadow-sm"
                   />
                 ) : (
-                  <div key={i} className="flex items-center gap-1.5 rounded-xl border border-[rgba(41,151,255,0.2)] bg-white/70 px-2.5 py-1.5">
+                  <div key={i} className="flex items-center gap-1.5 rounded-xl border border-[rgba(47,102,229,0.2)] bg-white/70 px-2.5 py-1.5">
                     <FileText size={12} className="text-slate-500 flex-shrink-0" />
                     <span className="max-w-[120px] truncate text-[12px] text-slate-700">{att.name}</span>
                   </div>
@@ -86,7 +86,7 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
             </div>
           )}
           {message.content && (
-            <div className="rounded-2xl rounded-tr-sm border border-[rgba(41,151,255,0.2)] bg-[linear-gradient(145deg,rgba(41,151,255,0.14)_0%,rgba(191,90,242,0.1)_100%)] px-4 py-3 shadow-[0_18px_36px_rgba(41,151,255,0.08)]">
+            <div className="rounded-2xl rounded-tr-sm border border-[rgba(47,102,229,0.2)] bg-[linear-gradient(145deg,rgba(47,102,229,0.14)_0%,rgba(191,90,242,0.1)_100%)] px-4 py-3 shadow-[0_18px_36px_rgba(47,102,229,0.08)]">
               <p className="whitespace-pre-wrap text-[14px] leading-[1.75] text-slate-900">
                 {message.content}
               </p>
@@ -131,7 +131,7 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
                     {message.content}
                   </ReactMarkdown>
                   {isStreaming && (
-                    <span className="ml-0.5 inline-block h-[14px] w-[2px] animate-cursor rounded-full bg-[rgba(41,151,255,0.45)] align-middle" />
+                    <span className="ml-0.5 inline-block h-[14px] w-[2px] animate-cursor rounded-full bg-[rgba(47,102,229,0.45)] align-middle" />
                   )}
                 </>
               )}
@@ -154,7 +154,7 @@ export default function MessageBubble({ message, isStreaming, onRetry }: Props) 
             {message.isError && message.retryContent && onRetry && (
               <button
                 onClick={() => onRetry(message.retryContent!)}
-                className="flex items-center gap-1 text-[12px] text-[var(--brand)] hover:text-[#1579d6] font-medium transition-colors"
+                className="flex items-center gap-1 text-[12px] text-[var(--brand)] hover:text-[#1f54cf] font-medium transition-colors"
               >
                 <RotateCcw size={10} strokeWidth={2.5} /> Retry
               </button>

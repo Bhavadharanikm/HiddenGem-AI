@@ -22,7 +22,7 @@ type Props = {
 };
 
 const SWATCH_COLORS = [
-  "bg-[rgba(41,151,255,0.12)] text-[#2997ff] border-[rgba(41,151,255,0.2)]",
+  "bg-[rgba(47,102,229,0.18)] text-[#2f66e5] border-[rgba(47,102,229,0.38)]",
   "bg-[rgba(255,159,10,0.12)] text-[#ff9f0a] border-[rgba(255,159,10,0.2)]",
   "bg-[rgba(48,209,88,0.12)] text-[#30d158] border-[rgba(48,209,88,0.2)]",
   "bg-[rgba(191,90,242,0.12)] text-[#bf5af2] border-[rgba(191,90,242,0.2)]",
@@ -129,7 +129,7 @@ function WizardProgressBar({ step }: { step: WizardStep }) {
           <div className={cn(
             "w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold flex-shrink-0 transition-all duration-300 border",
             i < step  ? "bg-[var(--brand)] border-[var(--brand)] text-white"
-            : i === step ? "bg-[rgba(41,151,255,0.1)] border-[var(--brand)] text-[var(--brand)]"
+            : i === step ? "bg-[rgba(47,102,229,0.16)] border-[var(--brand)] text-[var(--brand)]"
             : "bg-white border-[var(--border)] text-slate-500"
           )}>
             {i < step ? <Check size={10} strokeWidth={3} /> : i + 1}
@@ -144,10 +144,10 @@ function WizardProgressBar({ step }: { step: WizardStep }) {
 // Input / field helpers
 // ─────────────────────────────────────────────────────────────
 
-const fieldClass = "w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all";
+const fieldClass = "w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(47,102,229,0.4)] focus:ring-2 focus:ring-[rgba(47,102,229,0.12)] transition-all";
 const labelClass = "text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-600 block mb-1.5";
-const primaryBtn = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2";
-const ghostBtn  = "text-[12px] text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 rounded-lg px-2 py-1";
+const primaryBtn = "flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1f54cf] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.35)] focus-visible:ring-offset-2";
+const ghostBtn  = "text-[12px] text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2 rounded-lg px-2 py-1";
 
 // ─────────────────────────────────────────────────────────────
 // Add Client Wizard
@@ -277,10 +277,10 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
             {docs.length > 0 && (
               <div className="space-y-1.5">
                 {docs.map((doc) => (
-                  <div key={doc.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[rgba(41,151,255,0.05)] border border-[var(--border)]">
+                  <div key={doc.id} className="flex items-center gap-2.5 rounded-xl border border-[rgba(47,102,229,0.22)] bg-[rgba(47,102,229,0.08)] px-3 py-2">
                     <FileText size={13} className="text-[var(--brand)] flex-shrink-0" />
                     <span className="text-[12px] text-slate-700 truncate flex-1">{doc.name}</span>
-                    <button onClick={() => handleRemoveDoc(doc.id)} aria-label="Remove document" className="p-1 text-slate-500 hover:text-red-500 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2">
+                    <button onClick={() => handleRemoveDoc(doc.id)} aria-label="Remove document" className="p-1 text-slate-500 hover:text-red-500 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -296,7 +296,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
               <input value={docName} onChange={(e) => setDocName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddDoc()} placeholder="e.g. Brand Guidelines" className={fieldClass} />
             </div>
             {addError && <p className="text-[12px] text-red-500">{addError}</p>}
-            <button onClick={handleAddDoc} disabled={adding || !driveUrl.trim()} className="flex items-center gap-1.5 text-[12px] border border-[var(--border)] hover:border-[rgba(41,151,255,0.3)] hover:bg-[rgba(41,151,255,0.04)] disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 px-3 py-2 rounded-xl transition-colors">
+            <button onClick={handleAddDoc} disabled={adding || !driveUrl.trim()} className="flex items-center gap-1.5 rounded-xl border border-[rgba(47,102,229,0.26)] px-3 py-2 text-[12px] text-[var(--brand)] transition-colors hover:bg-[rgba(47,102,229,0.08)] disabled:cursor-not-allowed disabled:opacity-40">
               {adding ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} strokeWidth={2.5} />}
               {adding ? "Adding…" : "Add document"}
             </button>
@@ -342,7 +342,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
               <span className="w-2 h-2 rounded-full bg-slate-300" />
               <span className="text-[13px] text-slate-600">Not connected</span>
             </div>
-            <a href={`/api/v1/meta-ads/connect?tenant_id=${createdClient.id}`} className="inline-flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1579d6] text-white font-semibold px-4 py-2 rounded-xl transition-colors">
+            <a href={`/api/v1/meta-ads/connect?tenant_id=${createdClient.id}`} className="inline-flex items-center gap-1.5 text-[12px] bg-[var(--brand)] hover:bg-[#1f54cf] text-white font-semibold px-4 py-2 rounded-xl transition-colors">
               Connect Meta Account
             </a>
             <p className="text-[12px] text-slate-500">Connecting will redirect you to Meta. You can also connect later from the Meta Ads tab.</p>
@@ -392,7 +392,7 @@ function AddClientWizard({ onSaved, onCancel }: AddClientWizardProps) {
         )}
         {(step === 1 || step === 2) && (
           <>
-            <button onClick={back} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 border-slate-300 bg-white text-[12px] font-semibold text-slate-700 hover:border-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2">
+            <button onClick={back} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border-2 border-slate-300 bg-white text-[12px] font-semibold text-slate-700 hover:border-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2">
               <ChevronLeft size={14} strokeWidth={2.5} /> Back
             </button>
             <button onClick={advance} className={primaryBtn}>
@@ -527,7 +527,7 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
           {/* Header */}
           <div className="px-4 pt-5 pb-4 border-b border-[var(--border)] flex-shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--border-strong)] bg-[rgba(41,151,255,0.1)] flex-shrink-0">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-[rgba(47,102,229,0.34)] bg-[rgba(47,102,229,0.16)]">
                 <Gem size={14} className="text-[var(--brand)]" strokeWidth={1.5} />
               </div>
               <div>
@@ -542,10 +542,10 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
             <button
               onClick={() => { setShowAddForm(true); setSelectedClientId(null); }}
               className={cn(
-                "flex items-center gap-1.5 w-full text-[12px] font-semibold px-3 py-2 rounded-xl transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
+                "flex items-center gap-1.5 w-full text-[12px] font-semibold px-3 py-2 rounded-xl transition-colors border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2",
                 showAddForm
-                  ? "bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border-[rgba(41,151,255,0.25)]"
-                  : "text-[var(--brand)] border-[rgba(41,151,255,0.25)] hover:bg-[rgba(41,151,255,0.06)]"
+                  ? "border-[rgba(47,102,229,0.4)] bg-[rgba(47,102,229,0.16)] text-[var(--brand)]"
+                  : "text-[var(--brand)] border-[rgba(47,102,229,0.32)] hover:bg-[rgba(47,102,229,0.08)]"
               )}
             >
               <Plus size={12} strokeWidth={2.5} /> Add client
@@ -567,8 +567,8 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
                     key={client.id}
                     onClick={() => { setSelectedClientId(client.id); setShowAddForm(false); setMobileShowDetail(true); }}
                     className={cn(
-                      "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left transition-colors mb-0.5 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
-                      isSelected ? "bg-[rgba(41,151,255,0.08)] border-[rgba(41,151,255,0.18)]" : "border-transparent hover:bg-white hover:border-[var(--border)]"
+                      "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left transition-colors mb-0.5 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2",
+                      isSelected ? "border-[rgba(47,102,229,0.38)] bg-[rgba(47,102,229,0.14)] shadow-[0_8px_20px_rgba(47,102,229,0.12)]" : "border-transparent hover:bg-white hover:border-[var(--border)]"
                     )}
                   >
                     <div className={cn("w-6 h-6 rounded-lg border flex items-center justify-center flex-shrink-0 text-[12px] font-semibold", swatch)}>
@@ -588,7 +588,7 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
 
           {/* Close button */}
           <div className="px-3 py-3 border-t border-[var(--border)] flex-shrink-0">
-            <button onClick={onClose} className="flex items-center gap-1.5 w-full text-[12px] text-slate-500 hover:text-slate-600 px-2.5 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2">
+            <button onClick={onClose} className="flex items-center gap-1.5 w-full text-[12px] text-slate-500 hover:text-slate-600 px-2.5 py-2 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2">
               <X size={12} /> Close
             </button>
           </div>
@@ -604,7 +604,7 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
               {/* Mobile-only close button (sidebar is hidden during wizard) */}
               <div className="flex sm:hidden items-center justify-between px-4 pt-3 pb-0 flex-shrink-0">
                 <span className="text-[12px] text-slate-500">New client</span>
-                <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2" aria-label="Close settings">
+                <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2" aria-label="Close settings">
                   <X size={14} />
                 </button>
               </div>
@@ -621,7 +621,7 @@ export default function SettingsModal({ open, onClose, onClientsChange }: Props)
               {/* Mobile back button */}
               <button
                 onClick={() => setMobileShowDetail(false)}
-                className="flex sm:hidden items-center gap-1 mb-4 text-[12px] text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
+                className="flex sm:hidden items-center gap-1 mb-4 text-[12px] text-slate-500 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2"
               >
                 <ChevronLeft size={13} strokeWidth={2.5} /> Clients
               </button>

@@ -12,6 +12,7 @@ import SettingsModal from "@/components/settings/SettingsModal";
 import PerformanceDashboardView from "@/components/performance/PerformanceDashboardView";
 import EmailPerformanceDashboardView from "@/components/email/EmailPerformanceDashboardView";
 import KnowledgeBaseView from "@/components/knowledge/KnowledgeBaseView";
+import PricingToolView from "@/components/pricing/PricingToolView";
 
 export type Client = {
   id: string;
@@ -42,7 +43,7 @@ export type Message = {
   attachments?: MessageAttachment[];
 };
 
-type WorkspaceView = "chat" | "knowledge" | "performance" | "email";
+type WorkspaceView = "chat" | "knowledge" | "performance" | "email" | "pricing";
 
 type Props = {
   initialClients: Client[];
@@ -350,7 +351,16 @@ export default function ChatInterface({ initialClients }: Props) {
       "Conversation")
     : "New conversation";
 
-  const headerTitle = activeView === "performance" ? "Performance" : activeView === "email" ? "Email Performance" : activeView === "knowledge" ? "Knowledge Base" : currentTitle;
+  const headerTitle =
+    activeView === "performance"
+      ? "Performance"
+      : activeView === "email"
+        ? "Email Performance"
+        : activeView === "knowledge"
+          ? "Knowledge Base"
+          : activeView === "pricing"
+            ? "Pricing Tool"
+            : currentTitle;
   const showHistory = activeView === "chat";
 
   return (
@@ -361,7 +371,7 @@ export default function ChatInterface({ initialClients }: Props) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
       >
-        <div className="absolute -right-24 top-[-12rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(41,151,255,0.12)] blur-3xl" />
+        <div className="absolute -right-24 top-[-12rem] h-[30rem] w-[30rem] rounded-full bg-[rgba(47,102,229,0.12)] blur-3xl" />
         <div className="absolute left-1/2 top-1/3 h-[22rem] w-[22rem] -translate-x-1/2 rounded-full bg-[rgba(255,159,10,0.08)] blur-3xl" />
       </div>
 
@@ -392,7 +402,6 @@ export default function ChatInterface({ initialClients }: Props) {
           activeView={activeView}
           onNavigate={setActiveView}
           hasKnowledgeBase={hasKnowledgeBase}
-          onFilterApply={(_month, _year) => { /* filter wired — dashboards will consume when live data is added */ }}
         />
       </div>
 
@@ -403,7 +412,7 @@ export default function ChatInterface({ initialClients }: Props) {
           {/* Toggle left nav */}
           <button
             onClick={() => setLeftNavOpen((v) => !v)}
-            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             aria-label="Toggle navigation"
           >
           <PanelLeft size={15} />
@@ -426,7 +435,7 @@ export default function ChatInterface({ initialClients }: Props) {
           <button
             onClick={() => setHistoryOpen((v) => !v)}
             disabled={!showHistory}
-            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            className="flex-shrink-0 rounded-xl border border-transparent p-2.5 text-slate-500 transition-colors hover:border-[var(--border)] hover:bg-white/70 hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
             aria-label="Toggle conversation history"
           >
             <PanelRight size={15} />
@@ -439,6 +448,8 @@ export default function ChatInterface({ initialClients }: Props) {
             <PerformanceDashboardView clientName={selectedClient?.name ?? "Client"} />
           ) : activeView === "email" ? (
             <EmailPerformanceDashboardView clientName={selectedClient?.name ?? ""} />
+          ) : activeView === "pricing" ? (
+            <PricingToolView clientName={selectedClient?.name ?? "Client"} />
           ) : activeView === "knowledge" && selectedClient ? (
             <KnowledgeBaseView clientId={selectedClient.id} clientName={selectedClient.name} onDocsChange={(count) => setHasKnowledgeBase(count > 0)} />
           ) : messages.length === 0 && streamingMessage === null && !isLoading ? (
@@ -525,17 +536,17 @@ function EmptyState({ clientName, onSuggestion }: { clientName?: string; onSugge
   return (
     <div className="flex h-full min-h-[60vh] flex-col items-center justify-center px-8 text-center">
       <div className="relative mb-6">
-        <div aria-hidden="true" className="absolute -inset-8 rounded-full bg-[rgba(41,151,255,0.16)] blur-3xl" />
+        <div aria-hidden="true" className="absolute -inset-8 rounded-full bg-[rgba(47,102,229,0.16)] blur-3xl" />
         <div
           role="img"
           aria-label="HiddenGem AI"
-          className="relative flex h-18 w-18 items-center justify-center rounded-[1.75rem] border border-[rgba(193,209,236,1)] bg-[rgba(255,255,255,0.74)] shadow-[0_22px_50px_rgba(41,151,255,0.14)]"
+          className="relative flex h-18 w-18 items-center justify-center rounded-[1.75rem] border border-[rgba(193,209,236,1)] bg-[rgba(255,255,255,0.74)] shadow-[0_22px_50px_rgba(47,102,229,0.14)]"
         >
           <Gem size={28} className="text-[var(--brand)]" strokeWidth={1.3} />
         </div>
       </div>
 
-      <div aria-hidden="true" className="mb-5 h-px w-16 bg-gradient-to-r from-transparent via-[rgba(41,151,255,0.5)] to-transparent" />
+      <div aria-hidden="true" className="mb-5 h-px w-16 bg-gradient-to-r from-transparent via-[rgba(47,102,229,0.5)] to-transparent" />
 
       <h2 className="mb-3 text-[22px] font-semibold tracking-[-0.03em] text-slate-900">
         {clientName ? `${clientName} AI` : "What can I help you with?"}
@@ -558,7 +569,7 @@ function EmptyState({ clientName, onSuggestion }: { clientName?: string; onSugge
                   : hint;
                 onSuggestion?.(q);
               }}
-              className="cursor-pointer rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.76)] px-3.5 py-2 text-[12px] font-medium text-slate-700 transition-colors hover:border-[rgba(41,151,255,0.35)] hover:bg-[rgba(255,255,255,0.92)] hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
+              className="cursor-pointer rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.76)] px-3.5 py-2 text-[12px] font-medium text-slate-700 transition-colors hover:border-[rgba(47,102,229,0.35)] hover:bg-[rgba(255,255,255,0.92)] hover:text-[var(--brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2"
             >
               {hint}
             </button>

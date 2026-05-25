@@ -19,7 +19,7 @@ function formatDate(d: string | null) {
 function StatusBadge({ status }: { status: string }) {
   if (status === "ready") return <span className="text-[12px] px-2 py-0.5 rounded-full bg-[rgba(48,209,88,0.12)] text-[#30d158] border border-[rgba(48,209,88,0.2)]">Ready</span>;
   if (status === "error") return <span className="text-[12px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200">Error</span>;
-  return <span className="inline-flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-full bg-[rgba(41,151,255,0.1)] text-[var(--brand)] border border-[rgba(41,151,255,0.2)]"><Loader2 size={10} className="animate-spin" />{status}</span>;
+  return <span className="inline-flex items-center gap-1 text-[12px] px-2 py-0.5 rounded-full bg-[rgba(47,102,229,0.1)] text-[var(--brand)] border border-[rgba(47,102,229,0.2)]"><Loader2 size={10} className="animate-spin" />{status}</span>;
 }
 
 export default function KnowledgeBaseView({ clientId, clientName, onDocsChange }: { clientId: string; clientName: string; onDocsChange?: (count: number) => void }) {
@@ -66,7 +66,7 @@ export default function KnowledgeBaseView({ clientId, clientName, onDocsChange }
       <div className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(41,151,255,0.1)] border border-[rgba(41,151,255,0.2)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[rgba(47,102,229,0.1)] border border-[rgba(47,102,229,0.2)]">
               <BookOpen size={17} className="text-[var(--brand)]" strokeWidth={1.75} />
             </div>
             <div>
@@ -98,7 +98,7 @@ export default function KnowledgeBaseView({ clientId, clientName, onDocsChange }
             {docs.map((doc) => (
               <div key={doc.id} className="rounded-2xl border border-[var(--border)] bg-white shadow-[0_4px_16px_rgba(15,23,42,0.04)] overflow-hidden">
                 <div className="flex items-center gap-4 px-5 py-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[rgba(41,151,255,0.08)] border border-[rgba(41,151,255,0.15)]">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[rgba(47,102,229,0.08)] border border-[rgba(47,102,229,0.15)]">
                     <FileText size={16} className="text-[var(--brand)]" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">

@@ -128,7 +128,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
         className={cn(
           "flex items-end gap-2 rounded-2xl border border-[var(--border)] bg-white px-3 py-3",
           "shadow-[0_2px_12px_rgba(15,23,42,0.06),0_1px_3px_rgba(15,23,42,0.04)]",
-          "focus-within:border-[rgba(41,151,255,0.4)] focus-within:shadow-[0_2px_12px_rgba(41,151,255,0.08),0_1px_3px_rgba(15,23,42,0.04)]",
+          "focus-within:border-[rgba(47,102,229,0.4)] focus-within:shadow-[0_2px_12px_rgba(47,102,229,0.08),0_1px_3px_rgba(15,23,42,0.04)]",
           "transition-all duration-150",
           disabled && "opacity-50 cursor-not-allowed"
         )}
@@ -138,7 +138,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
           disabled={disabled}
           onClick={() => fileInputRef.current?.click()}
           aria-label="Attach file"
-          className="mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2 disabled:cursor-not-allowed"
+          className="mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.35)] focus-visible:ring-offset-2 disabled:cursor-not-allowed"
         >
           <Plus size={16} strokeWidth={2} />
         </button>
@@ -165,7 +165,7 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
           disabled={!canSend}
           aria-label="Send message"
           className={cn(
-            "mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2",
+            "mb-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.35)] focus-visible:ring-offset-2",
             canSend
               ? "bg-[#1a1a1a] text-white hover:bg-[#333] active:scale-95"
               : "cursor-not-allowed bg-slate-100 text-slate-400"

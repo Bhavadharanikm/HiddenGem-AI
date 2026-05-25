@@ -1,14 +1,11 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import dynamic from "next/dynamic";
-
-const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
+import { useState, useMemo } from "react";
 
 // ── TYPES ─────────────────────────────────────────────────────────────────────
 type Row = { client: string; week: string; size: number; open: number; ctr: number; seg: string; subj: string };
 type SortField = "week" | "openRate" | "ctr";
-type SegFilter = "all" | "engagers" | "contacts";
+type SegFilter = "all" | "engagers" | "contacts" | "past";
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const RAW: Row[] = [
@@ -188,6 +185,10 @@ const PALETTE = ["#2563EB","#D97706","#16A34A","#DC2626","#7C3AED","#0891B2","#D
 const ALL_CLIENTS = [...new Set(RAW.map(d => d.client))].sort();
 const CLIENT_COLOR: Record<string, string> = {};
 ALL_CLIENTS.forEach((c, i) => { CLIENT_COLOR[c] = PALETTE[i % PALETTE.length]; });
+const EMAIL_BLUE = "#2f66e5";
+const EMAIL_BLUE_SOFT = "#5a7cf0";
+const EMAIL_VIOLET = "#7c4df3";
+const EMAIL_INDIGO = "#4f6fe8";
 
 function initials(name: string) {
   return name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
@@ -197,7 +198,12 @@ function monthLabel(week: string) {
   return d.toLocaleString("default", { month: "long" }) + " " + d.getFullYear();
 }
 function openColor(v: number) {
-  return v >= 60 ? "#16A34A" : v >= 40 ? "#D97706" : "#DC2626";
+  if (v >= 60) return "#16A34A";
+  if (v >= 40) return "#d97706";
+  return "#DC2626";
+}
+function themeScoreColor(v: number) {
+  return openColor(v);
 }
 function classifyTheme(s: string): string {
   const sl = s.toLowerCase();
@@ -222,38 +228,51 @@ function Surface({ children, className = "" }: { children: React.ReactNode; clas
 }
 
 export default function EmailPerformanceDashboardView({ clientName }: { clientName: string }) {
-  // Match sidebar client name against RAW data (case-insensitive partial match)
-  const selectedClient = useMemo(() => {
-    return ALL_CLIENTS.find(c => c.toLowerCase() === clientName.toLowerCase())
-      ?? ALL_CLIENTS.find(c => c.toLowerCase().includes(clientName.toLowerCase()))
-      ?? ALL_CLIENTS.find(c => clientName.toLowerCase().includes(c.toLowerCase()))
-      ?? ALL_CLIENTS[0]
-      ?? null;
-  }, [clientName]);
+  const selectedClient =
+    ALL_CLIENTS.find((c) => c.toLowerCase() === clientName.toLowerCase()) ??
+    ALL_CLIENTS.find((c) => c.toLowerCase().includes(clientName.toLowerCase())) ??
+    ALL_CLIENTS.find((c) => clientName.toLowerCase().includes(c.toLowerCase())) ??
+    ALL_CLIENTS[0] ??
+    null;
 
+  if (!selectedClient) {
+    return (
+      <div className="h-full overflow-y-auto bg-[#eef4fd]">
+        <div className="mx-auto max-w-[1320px] px-4 py-5 sm:px-8 md:px-12 lg:px-16">
+          <Surface className="rounded-[24px] p-8 text-center text-[13px] text-slate-500">
+            No email data is available yet for this client.
+          </Surface>
+        </div>
+      </div>
+    );
+  }
+
+  return <EmailDashboardClientView key={selectedClient} selectedClient={selectedClient} clientName={clientName} />;
+}
+
+function EmailDashboardClientView({ selectedClient, clientName }: { selectedClient: string; clientName: string }) {
   const [activeMonth, setActiveMonth] = useState<string | null>(null);
   const [segFilter, setSegFilter] = useState<SegFilter>("all");
+  const [activeTheme, setActiveTheme] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>("week");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [activeTab, setActiveTab] = useState<"campaigns" | "analysis">("campaigns");
-
-  // Reset filters when client changes
-  useEffect(() => {
-    setActiveMonth(null);
-    setSegFilter("all");
-    setSortField("week");
-    setSortDir("desc");
-    setActiveTab("campaigns");
-  }, [selectedClient]);
 
   const clientRows = useMemo(
     () => (!selectedClient ? [] : RAW.filter(d => d.client === selectedClient)),
     [selectedClient]
   );
 
+  const baseRows = useMemo(() => {
+    let rows = [...clientRows];
+    if (segFilter === "engagers") rows = rows.filter((d) => d.seg === "Recent Engagers");
+    if (segFilter === "contacts") rows = rows.filter((d) => d.seg === "All Contacts");
+    if (segFilter === "past") rows = rows.filter((d) => d.seg === "Past Guests");
+    return rows;
+  }, [clientRows, segFilter]);
+
   const monthTrend = useMemo(() => {
     const map: Record<string, { opens: number[]; date: Date }> = {};
-    clientRows.forEach(d => {
+    baseRows.forEach(d => {
       const m = monthLabel(d.week);
       if (!map[m]) map[m] = { opens: [], date: new Date(d.week) };
       map[m].opens.push(d.open);
@@ -265,370 +284,447 @@ export default function EmailPerformanceDashboardView({ clientName }: { clientNa
         date: v.date,
       }))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [clientRows]);
+  }, [baseRows]);
+
+  const scopedRows = useMemo(() => {
+    if (!activeMonth) return baseRows;
+    return baseRows.filter((d) => monthLabel(d.week) === activeMonth);
+  }, [baseRows, activeMonth]);
 
   const filteredRows = useMemo(() => {
-    let rows = [...clientRows];
-    if (activeMonth) rows = rows.filter(d => monthLabel(d.week) === activeMonth);
-    if (segFilter === "engagers") rows = rows.filter(d => d.seg === "Recent Engagers");
-    if (segFilter === "contacts") rows = rows.filter(d => d.seg === "All Contacts");
+    let rows = [...scopedRows];
+    if (activeTheme) rows = rows.filter((d) => classifyTheme(d.subj) === activeTheme);
     rows.sort((a, b) => {
       const va = sortField === "week" ? new Date(a.week).getTime() : sortField === "openRate" ? a.open : a.ctr;
       const vb = sortField === "week" ? new Date(b.week).getTime() : sortField === "openRate" ? b.open : b.ctr;
       return sortDir === "desc" ? vb - va : va - vb;
     });
     return rows;
-  }, [clientRows, activeMonth, segFilter, sortField, sortDir]);
+  }, [scopedRows, activeTheme, sortField, sortDir]);
 
   const stats = useMemo(() => {
-    if (!clientRows.length) return null;
+    if (!baseRows.length) return null;
+    const bestRow = [...baseRows].sort((a, b) => b.open - a.open)[0] ?? null;
     return {
-      avgOpen: clientRows.reduce((s, d) => s + d.open, 0) / clientRows.length,
-      avgCTR: clientRows.reduce((s, d) => s + d.ctr, 0) / clientRows.length,
-      best: Math.max(...clientRows.map(d => d.open)),
-      sends: clientRows.length,
+      avgOpen: baseRows.reduce((s, d) => s + d.open, 0) / baseRows.length,
+      avgCTR: baseRows.reduce((s, d) => s + d.ctr, 0) / baseRows.length,
+      best: bestRow,
+      delivered: baseRows.reduce((s, d) => s + d.size, 0),
+      sends: baseRows.length,
     };
-  }, [clientRows]);
+  }, [baseRows]);
 
-  const color = selectedClient ? CLIENT_COLOR[selectedClient] : "#1a56db";
-
-  const chartOptions: ApexCharts.ApexOptions = useMemo(() => ({
-    chart: {
-      type: "bar" as const,
-      toolbar: { show: false },
-      fontFamily: "inherit",
-      animations: { enabled: false },
-      background: "transparent",
-      events: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        dataPointSelection: (_e: any, _chart: any, config: any) => {
-          const m = monthTrend[config.dataPointIndex]?.month;
-          if (m) setActiveMonth(prev => (prev === m ? null : m));
-        },
-      },
-    },
-    dataLabels: { enabled: false },
-    grid: { show: false },
-    tooltip: { theme: "light", y: { formatter: (v: number) => v.toFixed(1) + "%" } },
-    xaxis: {
-      categories: monthTrend.map(m => m.month.split(" ")[0].slice(0, 3) + " " + String(m.date.getFullYear()).slice(2)),
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-      labels: { style: { fontSize: "10px", colors: "#94a3b8", fontWeight: "600" } },
-    },
-    yaxis: {
-      labels: {
-        style: { fontSize: "10px", colors: "#94a3b8" },
-        formatter: (v: number) => v.toFixed(0) + "%",
-      },
-    },
-    colors: monthTrend.map(m => (m.month === activeMonth ? color : color + "66")),
-    plotOptions: { bar: { borderRadius: 4, columnWidth: "60%", distributed: true } },
-    legend: { show: false },
-  }), [monthTrend, activeMonth, color]);
+  const color = EMAIL_BLUE;
 
   function toggleSort(f: SortField) {
     if (sortField === f) setSortDir(d => (d === "desc" ? "asc" : "desc"));
     else { setSortField(f); setSortDir("desc"); }
   }
 
+  const monthBars = useMemo(() => {
+    if (!monthTrend.length) return [];
+    const maxV = Math.max(...monthTrend.map((m) => m.open));
+    const minV = Math.min(...monthTrend.map((m) => m.open));
+    const range = maxV - minV || 1;
+    return monthTrend.map((m) => ({
+      ...m,
+      height: Math.max(((m.open - minV) / range) * 56 + 16, 8),
+      short: `${m.month.slice(0, 3)} '${String(m.date.getFullYear()).slice(2)}`,
+    }));
+  }, [monthTrend]);
+
+  const segmentCards = useMemo(() => {
+    const groups = [
+      {
+        key: "Past Guests",
+        label: "Past Guests",
+        tone: EMAIL_INDIGO,
+        surface: "rgba(90,124,240,0.08)",
+        border: "rgba(90,124,240,0.18)",
+      },
+      {
+        key: "Recent Engagers",
+        label: "Engagers",
+        tone: color,
+        surface: "rgba(47,102,229,0.06)",
+        border: "rgba(47,102,229,0.18)",
+      },
+      {
+        key: "All Contacts",
+        label: "All Contacts",
+        tone: EMAIL_VIOLET,
+        surface: "rgba(124,77,243,0.07)",
+        border: "rgba(124,77,243,0.16)",
+      },
+    ] as const;
+
+    return groups
+      .map((group) => {
+        const rows = baseRows.filter((d) => d.seg === group.key);
+        if (!rows.length) return null;
+        return {
+          ...group,
+          avgOpen: rows.reduce((sum, row) => sum + row.open, 0) / rows.length,
+          avgCTR: rows.reduce((sum, row) => sum + row.ctr, 0) / rows.length,
+          count: rows.length,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+      .sort((a, b) => b.avgOpen - a.avgOpen);
+  }, [baseRows, color]);
+
+  const themeStats = useMemo(() => {
+    const map: Record<string, { opens: number[]; ctrs: number[]; count: number }> = {};
+    scopedRows.forEach((row) => {
+      const theme = classifyTheme(row.subj);
+      if (!map[theme]) map[theme] = { opens: [], ctrs: [], count: 0 };
+      map[theme].opens.push(row.open);
+      map[theme].ctrs.push(row.ctr);
+      map[theme].count += 1;
+    });
+
+    return Object.entries(map)
+      .map(([theme, value]) => ({
+        theme,
+        avgOpen: value.opens.reduce((sum, item) => sum + item, 0) / value.opens.length,
+        avgCTR: value.ctrs.reduce((sum, item) => sum + item, 0) / value.ctrs.length,
+        count: value.count,
+      }))
+      .sort((a, b) => b.avgOpen - a.avgOpen);
+  }, [scopedRows]);
+
+  const bestRows = useMemo(() => {
+    const source = filteredRows.length ? filteredRows : scopedRows;
+    return [...source].sort((a, b) => b.open - a.open).slice(0, 6);
+  }, [filteredRows, scopedRows]);
+
+  const segmentSubtitle =
+    segFilter === "all"
+      ? "All Sends"
+      : segFilter === "engagers"
+        ? "Recent Engagers"
+        : segFilter === "past"
+          ? "Past Guests"
+          : "All Contacts";
+
   return (
-    <div className="h-full overflow-y-auto px-4 sm:px-8 md:px-12 lg:px-16 py-4 sm:py-8">
-      <div className="mx-auto max-w-[1200px] space-y-5">
-
-        {/* Page header */}
-        <div>
-          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[rgba(255,159,10,0.3)] bg-[rgba(255,159,10,0.1)] px-3 py-1 text-[12px] font-semibold text-[#d97706]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#d97706]" />
-            Sample data — connect your accounts in Settings
+    <div
+      className="h-full overflow-y-auto"
+      style={{
+        background: `
+          radial-gradient(circle at top right, rgba(47, 102, 229, 0.12), transparent 32%),
+          radial-gradient(circle at bottom left, rgba(191, 90, 242, 0.08), transparent 28%),
+          radial-gradient(circle at 72% 76%, rgba(255, 159, 10, 0.06), transparent 24%),
+          #eef4fd
+        `,
+      }}
+    >
+      <div className="mx-auto max-w-[1320px] space-y-4 px-4 py-5 sm:px-8 md:px-12 lg:px-16">
+        <header className="pt-2">
+          <h1 className="text-[28px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[34px]">
+            Email Performance
+          </h1>
+          <div className="mt-2">
+            <span className="inline-flex items-center rounded-full bg-[rgba(47,102,229,0.1)] px-3 py-1 text-[13px] font-semibold tracking-[-0.01em] text-[var(--brand)]">
+              {baseRows.length} campaigns
+            </span>
           </div>
-          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#2997ff]">Email Performance</p>
-          <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-slate-900">Campaign Analytics</h1>
-          <p className="mt-0.5 text-[12px] text-slate-500">{ALL_CLIENTS.length} clients · {RAW.length} campaigns</p>
-        </div>
+        </header>
 
-        {/* Stats strip */}
         {stats && (
-          <Surface className="p-5">
-            <div className="flex flex-wrap items-center gap-5">
-              {(
-                [
-                  { label: "Avg Open", val: stats.avgOpen.toFixed(1) + "%", c: "#16A34A" },
-                  { label: "Avg CTR", val: stats.avgCTR.toFixed(2) + "%", c: "#2563EB" },
-                  { label: "Best Open", val: stats.best.toFixed(1) + "%", c: color },
-                  { label: "Sends", val: String(stats.sends), c: "#64748b" },
-                ] as const
-              ).map((s, i, arr) => (
-                <div key={s.label} className="flex items-center gap-5">
-                  <div className="px-1 text-center">
-                    <div className="text-[18px] font-bold tabular-nums tracking-tight" style={{ color: s.c }}>{s.val}</div>
-                    <div className="mt-0.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-500">{s.label}</div>
+          <div className="grid gap-3 xl:grid-cols-4">
+            {[
+              { label: "Avg Open Rate", value: `${stats.avgOpen.toFixed(1)}%`, note: `${baseRows.length} campaigns`, tone: openColor(stats.avgOpen) },
+              { label: "Avg CTR", value: `${stats.avgCTR.toFixed(2)}%`, note: "click-through", tone: "var(--brand)" },
+              { label: "Peak Open Rate", value: `${stats.best?.open.toFixed(1) ?? "0.0"}%`, note: stats.best?.week ?? "best month", tone: openColor(stats.best?.open ?? 0) },
+              { label: "Total Delivered", value: `${(stats.delivered / 1000).toFixed(0)}K`, note: "emails sent", tone: "#64748b" },
+            ].map((item) => (
+              <Surface key={item.label} className="rounded-[24px] px-5 py-5">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{item.label}</div>
+                <div className="mt-3 text-[33px] font-semibold leading-none tracking-[-0.04em]" style={{ color: item.tone }}>
+                  {item.value}
+                </div>
+                <div className="mt-2 text-[12px] text-slate-500">{item.note}</div>
+              </Surface>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <Surface className="rounded-[24px] px-5 py-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[22px] font-semibold tracking-[-0.03em] text-slate-900">Open Rate by Month</div>
+                <div className="mt-1 text-[13px] text-slate-500">Click a bar to filter, then refine by segment or theme below.</div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {([["all", "All"], ["engagers", "Engagers"], ["past", "Past Guests"], ["contacts", "All Contacts"]] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => {
+                      setSegFilter(val);
+                      setActiveMonth(null);
+                      setActiveTheme(null);
+                    }}
+                    className="rounded-full border px-3 py-1.5 text-[12px] font-semibold"
+                    style={segFilter === val ? { borderColor: color, background: `${color}12`, color } : { borderColor: "#dbe6f3", color: "#64748b" }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <div className="flex h-[118px] items-end gap-2">
+                {monthBars.map((month) => {
+                  const active = activeMonth === month.month;
+                  const barColor = activeMonth ? (active ? color : `${color}88`) : color;
+                  return (
+                    <button
+                      key={month.month}
+                      onClick={() => {
+                        setActiveMonth((prev) => (prev === month.month ? null : month.month));
+                        setActiveTheme(null);
+                      }}
+                      className="group flex flex-1 flex-col items-center justify-end"
+                      title={`${month.month}: ${month.open.toFixed(1)}%`}
+                    >
+                      <div className="mb-2 rounded-md bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        {month.open.toFixed(1)}%
+                      </div>
+                      <div
+                        className={`w-full max-w-[76px] rounded-t-[10px] transition-all ${activeMonth && !active ? "opacity-35" : ""}`}
+                        style={{ height: `${month.height}px`, background: barColor }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex gap-2">
+                {monthBars.map((month) => (
+                  <button
+                    key={month.month}
+                    onClick={() => {
+                      setActiveMonth((prev) => (prev === month.month ? null : month.month));
+                      setActiveTheme(null);
+                    }}
+                    className={`flex-1 text-center text-[12px] font-semibold ${activeMonth === month.month ? "text-slate-900" : "text-slate-400"}`}
+                  >
+                    {month.short}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Surface>
+
+          <Surface className="overflow-hidden rounded-[24px]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dbe6f3] px-5 py-4">
+              <div>
+                <div className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">
+                  {activeTheme ? `${activeTheme} Emails` : activeMonth ?? "All Campaigns"}
+                </div>
+                <div className="mt-0.5 text-[12px] text-slate-500">{filteredRows.length} results</div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {([["week", "Date"], ["openRate", "Open %"], ["ctr", "CTR %"]] as const).map(([field, label]) => (
+                  <button
+                    key={field}
+                    onClick={() => toggleSort(field)}
+                    className="rounded-[10px] border px-3 py-1.5 text-[12px] font-medium"
+                    style={sortField === field ? { borderColor: color, background: `${color}10`, color } : { borderColor: "#dbe6f3", color: "#64748b" }}
+                  >
+                    {label} {sortField === field ? (sortDir === "desc" ? "↓" : "↑") : "↕"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-b border-[#eef3fb] bg-[#fbfcff] px-5 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Month</span>
+                <button
+                  onClick={() => {
+                    setActiveMonth(null);
+                    setActiveTheme(null);
+                  }}
+                  className="rounded-full border px-3 py-1 text-[12px] font-semibold"
+                  style={!activeMonth ? { borderColor: color, background: `${color}12`, color } : { borderColor: "#dbe6f3", color: "#64748b" }}
+                >
+                  All
+                </button>
+                {monthTrend.map((month) => (
+                  <button
+                    key={month.month}
+                    onClick={() => {
+                      setActiveMonth((prev) => (prev === month.month ? null : month.month));
+                      setActiveTheme(null);
+                    }}
+                    className="rounded-full border px-3 py-1 text-[12px] font-semibold"
+                    style={activeMonth === month.month ? { borderColor: color, background: `${color}12`, color } : { borderColor: "#dbe6f3", color: "#64748b" }}
+                  >
+                    {month.month}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid border-b border-[#dbe6f3] px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500" style={{ gridTemplateColumns: "minmax(0,1fr) 132px 150px 92px 78px" }}>
+              <span>Subject Line</span>
+              <span>Date</span>
+              <span>Segment</span>
+              <span>Open %</span>
+              <span>CTR %</span>
+            </div>
+
+            <div className="max-h-[540px] overflow-y-auto">
+              {filteredRows.length === 0 ? (
+                <div className="py-12 text-center text-[13px] text-slate-500">No campaigns match</div>
+              ) : (
+                filteredRows.map((row, index) => {
+                  const tone = openColor(row.open);
+                  const theme = classifyTheme(row.subj);
+                  return (
+                    <div key={`${row.week}-${index}`} className="grid items-start border-b border-[#eef3fb] px-5 py-3 hover:bg-[#f8fbff]" style={{ gridTemplateColumns: "minmax(0,1fr) 132px 150px 92px 78px" }}>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-medium leading-[1.45] text-slate-900">{row.subj}</div>
+                        <span className="mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: `${tone}12`, color: tone }}>
+                          {theme}
+                        </span>
+                      </div>
+                      <div className="pt-0.5 text-[12px] font-medium text-slate-600">{row.week}</div>
+                      <div className="pt-0.5">
+                        <span
+                          className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                          style={
+                            row.seg === "Recent Engagers"
+                              ? { background: `${color}14`, color }
+                              : row.seg === "Past Guests"
+                                ? { background: "rgba(90,124,240,0.12)", color: EMAIL_BLUE_SOFT }
+                                : { background: "rgba(124,77,243,0.1)", color: EMAIL_VIOLET }
+                          }
+                        >
+                          {row.seg === "Recent Engagers" ? "Engagers" : row.seg === "Past Guests" ? "Past Guests" : "All Contacts"}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-bold" style={{ color: tone }}>{row.open.toFixed(1)}%</div>
+                        <div className="mt-1 h-[3px] w-12 rounded-full bg-slate-100">
+                          <div className="h-full rounded-full" style={{ width: `${Math.min(row.open, 100)}%`, background: tone }} />
+                        </div>
+                      </div>
+                      <div className="pt-0.5 text-[13px] font-semibold" style={{ color }}>{row.ctr.toFixed(2)}%</div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-[#eef3fb] bg-[#fbfcff] px-5 py-2.5 text-[12px] text-slate-500">
+              <span>
+                Showing {filteredRows.length} of {scopedRows.length} campaigns
+                {activeTheme ? ` · ${activeTheme}` : activeMonth ? ` · ${activeMonth}` : ""}
+              </span>
+              <span>Click headers to sort</span>
+            </div>
+          </Surface>
+
+          <Surface className="rounded-[24px] p-5">
+            <div className="mb-4 text-[18px] font-semibold tracking-[-0.02em] text-slate-900">Segment Performance</div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {segmentCards.map((card) => (
+                <div
+                  key={card.key}
+                  className="rounded-[18px] border p-4"
+                  style={{ borderColor: card.border, background: card.surface }}
+                >
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{card.label}</div>
+                  <div className="mt-3 text-[30px] font-semibold tracking-[-0.04em]" style={{ color: openColor(card.avgOpen) }}>
+                    {card.avgOpen.toFixed(1)}%
                   </div>
-                  {i < arr.length - 1 && <div className="h-8 w-px shrink-0 bg-[#f0f4fb]" />}
+                  <div className="mt-1 text-[12px] font-semibold text-slate-700">{card.count} sends</div>
+                  <div className="text-[12px] text-slate-500">{card.avgCTR.toFixed(2)}% CTR</div>
                 </div>
               ))}
             </div>
-          </Surface>
-        )}
-
-        {/* Month trend chart */}
-        <>
-            {monthTrend.length >= 2 && (
-              <Surface className="p-4">
-                <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Monthly Avg Open Rate</p>
-                    <div className="mt-1 h-[2px] w-8 rounded-full bg-slate-900" />
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      onClick={() => setActiveMonth(null)}
-                      className={`rounded-full border px-3 py-1 text-[12px] font-medium transition-all ${!activeMonth ? "border-slate-900 bg-slate-900 text-white" : "border-[#dbe6f3] text-slate-500 hover:border-slate-300"}`}
-                    >All</button>
-                    {monthTrend.map(m => (
-                      <button
-                        key={m.month}
-                        onClick={() => setActiveMonth(prev => (prev === m.month ? null : m.month))}
-                        className="rounded-full border px-3 py-1 text-[12px] font-medium transition-all"
-                        style={activeMonth === m.month ? { borderColor: color, background: color + "18", color } : { borderColor: "#dbe6f3", color: "#64748b" }}
-                      >{m.month}</button>
-                    ))}
-                  </div>
-                </div>
-                <Chart
-                  type="bar"
-                  height={120}
-                  series={[{ name: "Avg Open %", data: monthTrend.map(m => +m.open.toFixed(1)) }]}
-                  options={chartOptions}
-                />
-                <p className="mt-1 text-center text-[12px] text-slate-500">Click a bar or month pill to filter</p>
-              </Surface>
-            )}
-
-            {/* Main content card */}
-            <Surface>
-              {/* Inner tab bar */}
-              <div className="flex border-b border-[#f0f4fb] px-6">
-                {(["campaigns", "analysis"] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className="mr-6 border-b-2 py-3.5 text-[13px] capitalize transition-all"
-                    style={{
-                      borderColor: activeTab === tab ? color : "transparent",
-                      color: activeTab === tab ? "#0f172a" : "#94a3b8",
-                      fontWeight: activeTab === tab ? 600 : 400,
-                    }}
-                  >{tab === "campaigns" ? "Campaigns" : "Analysis"}</button>
-                ))}
+            {segmentCards.length > 0 && (
+              <div className="mt-4 border-t border-[#eef3fb] pt-4 text-[12px] text-slate-500">
+                {segmentCards[0].label} leads this view with a {segmentCards[0].avgOpen.toFixed(1)}% average open rate.
               </div>
+            )}
+          </Surface>
 
-              {/* Campaigns panel */}
-              {activeTab === "campaigns" && (
-                <>
-                  <div className="flex flex-wrap items-center gap-2 border-b border-[#f9fafb] px-6 py-3">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">Segment</span>
-                    <div className="h-4 w-px shrink-0 bg-[#e2e8f0]" />
-                    {([["all", "All"], ["engagers", "Recent Engagers"], ["contacts", "All Contacts"]] as const).map(([val, label]) => (
-                      <button
-                        key={val}
-                        onClick={() => setSegFilter(val)}
-                        className="rounded-full border px-3.5 py-1 text-[12px] font-medium transition-all"
-                        style={
-                          segFilter === val
-                            ? val === "all" ? { borderColor: "#111827", background: "#111827", color: "#fff", fontWeight: 600 }
-                              : val === "engagers" ? { borderColor: "#2563EB33", background: "#EFF6FF", color: "#2563EB", fontWeight: 600 }
-                              : { borderColor: "#7C3AED33", background: "#F5F3FF", color: "#7C3AED", fontWeight: 600 }
-                            : { borderColor: "#e2e8f0", color: "#64748b" }
-                        }
-                      >{label}</button>
-                    ))}
-                    <div className="flex-1" />
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">Sort</span>
-                    {([["week", "Date"], ["openRate", "Open %"], ["ctr", "CTR %"]] as const).map(([field, label]) => (
-                      <button
-                        key={field}
-                        onClick={() => toggleSort(field)}
-                        className={`flex items-center gap-1 rounded-[8px] border px-3 py-1.5 text-[12px] transition-all ${sortField === field ? "border-[#2563EB] bg-[#EFF6FF] font-semibold text-[#2563EB]" : "border-[#e2e8f0] text-slate-500 hover:border-slate-300"}`}
+          <div className="grid gap-4 xl:grid-cols-[0.42fr_0.58fr]">
+            <Surface className="rounded-[24px] p-5">
+              <div className="mb-4 text-[18px] font-semibold tracking-[-0.02em] text-slate-900">Theme Breakdown</div>
+              <div className="space-y-2">
+                {themeStats.map((theme, index) => (
+                  <button
+                    key={theme.theme}
+                    onClick={() => setActiveTheme((prev) => (prev === theme.theme ? null : theme.theme))}
+                    className={`flex w-full items-center gap-3 rounded-[14px] border px-3 py-3 text-left transition ${
+                      index === 0 && !activeTheme
+                        ? "border-slate-900 bg-slate-900"
+                        : activeTheme === theme.theme
+                          ? "border-[rgba(47,102,229,0.28)] bg-[rgba(47,102,229,0.06)]"
+                          : "border-[#eef3fb] bg-[#fafcff]"
+                    }`}
+                  >
+                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] text-[11px] font-bold ${
+                      index === 0 && !activeTheme ? "bg-white/15 text-white" : "bg-[#e9eef8] text-slate-500"
+                    }`}>
+                      {index + 1}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className={`truncate text-[12px] font-semibold ${index === 0 && !activeTheme ? "text-white" : "text-slate-900"}`}>{theme.theme}</div>
+                      <div className={`text-[12px] ${index === 0 && !activeTheme ? "text-white/45" : "text-slate-500"}`}>{theme.count} sends</div>
+                    </div>
+                    <div className="text-right">
+                      <div
+                        className="text-[14px] font-bold"
+                        style={{ color: index === 0 && !activeTheme ? "#ffffff" : themeScoreColor(theme.avgOpen) }}
                       >
-                        {label} <span>{sortField === field ? (sortDir === "desc" ? "↓" : "↑") : "↕"}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <div className="min-w-[560px]">
-                      <div className="grid border-b-[1.5px] border-slate-900 px-6 py-2" style={{ gridTemplateColumns: "1fr 110px 90px 80px 80px" }}>
-                        {["Subject Line", "Week", "Segment", "Open %", "CTR %"].map(h => (
-                          <span key={h} className="text-[12px] font-semibold uppercase tracking-[0.1em] text-slate-600">{h}</span>
-                        ))}
+                        {theme.avgOpen.toFixed(1)}%
                       </div>
-
-                      <div className="max-h-[480px] overflow-y-auto">
-                        {filteredRows.length === 0 ? (
-                          <div className="py-10 text-center text-[13px] text-slate-500">No campaigns match these filters</div>
-                        ) : filteredRows.map((d, i) => {
-                          const oc = openColor(d.open);
-                          const theme = classifyTheme(d.subj);
-                          return (
-                            <div key={i} className="grid items-start border-b border-[#f9fafb] px-6 py-3 transition-colors hover:bg-slate-50" style={{ gridTemplateColumns: "1fr 110px 90px 80px 80px" }}>
-                              <div>
-                                <div className="text-[13px] font-medium leading-[1.4] text-slate-900">{d.subj}</div>
-                                <span className="mt-1 inline-block rounded-full px-1.5 py-0.5 text-[12px] font-semibold" style={{ background: oc + "12", color: oc }}>{theme}</span>
-                              </div>
-                              <div className="pt-0.5 text-[12px] tabular-nums text-slate-600">{d.week}</div>
-                              <div className="pt-0.5">
-                                <span className={`inline-block rounded-full px-1.5 py-0.5 text-[12px] font-semibold ${d.seg === "Recent Engagers" ? "bg-[#EFF6FF] text-[#2563EB]" : "bg-[#F5F3FF] text-[#7C3AED]"}`}>
-                                  {d.seg === "Recent Engagers" ? "Engagers" : "All"}
-                                </span>
-                              </div>
-                              <div>
-                                <div className="text-[13px] font-bold tabular-nums" style={{ color: oc }}>{d.open.toFixed(1)}%</div>
-                                <div className="mt-1 h-[3px] w-12 overflow-hidden rounded-full bg-slate-100">
-                                  <div className="h-full rounded-full" style={{ width: `${Math.min(d.open, 100)}%`, background: oc }} />
-                                </div>
-                              </div>
-                              <div className="pt-0.5 text-[13px] font-semibold tabular-nums text-[#2563EB]">{d.ctr.toFixed(2)}%</div>
-                            </div>
-                          );
-                        })}
+                      <div
+                        className="text-[12px] font-medium"
+                        style={{ color: index === 0 && !activeTheme ? "rgba(255,255,255,0.72)" : EMAIL_BLUE }}
+                      >
+                        {theme.avgCTR.toFixed(2)}% CTR
                       </div>
                     </div>
-                  </div>
-
-                  <div className="border-t border-[#f0f4fb] px-6 py-2.5 text-right text-[12px] text-slate-500">
-                    Showing {filteredRows.length} campaign{filteredRows.length !== 1 ? "s" : ""}
-                    {activeMonth && ` · ${activeMonth}`}
-                    {segFilter !== "all" && ` · ${segFilter === "engagers" ? "Recent Engagers" : "All Contacts"}`}
-                  </div>
-                </>
-              )}
-
-              {/* Analysis panel */}
-              {activeTab === "analysis" && (
-                <>
-                  <div className="flex flex-wrap items-center gap-2 border-b border-[#f9fafb] px-6 py-3">
-                    <span className="text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-500">Filter Month</span>
-                    <div className="h-4 w-px shrink-0 bg-[#e2e8f0]" />
-                    <button
-                      onClick={() => setActiveMonth(null)}
-                      className={`rounded-full border px-3.5 py-1 text-[12px] font-medium transition-all ${!activeMonth ? "border-slate-900 bg-slate-900 font-semibold text-white" : "border-[#e2e8f0] text-slate-500 hover:border-slate-300"}`}
-                    >All</button>
-                    {monthTrend.map(m => (
-                      <button
-                        key={m.month}
-                        onClick={() => setActiveMonth(prev => (prev === m.month ? null : m.month))}
-                        className="rounded-full border px-3.5 py-1 text-[12px] font-medium transition-all"
-                        style={activeMonth === m.month ? { borderColor: color, background: color + "18", color } : { borderColor: "#e2e8f0", color: "#64748b" }}
-                      >{m.month}</button>
-                    ))}
-                  </div>
-                  <AnalysisContent rows={filteredRows} color={color} />
-                </>
-              )}
+                  </button>
+                ))}
+              </div>
             </Surface>
-        </>
-      </div>
-    </div>
-  );
-}
 
-function AnalysisContent({ rows, color }: { rows: Row[]; color: string }) {
-  if (!rows.length) {
-    return <div className="py-10 text-center text-[13px] text-slate-500">No data for this selection</div>;
-  }
-
-  const reRows = rows.filter(d => d.seg === "Recent Engagers");
-  const acRows = rows.filter(d => d.seg === "All Contacts");
-  const reAvg = reRows.length ? reRows.reduce((s, d) => s + d.open, 0) / reRows.length : null;
-  const acAvg = acRows.length ? acRows.reduce((s, d) => s + d.open, 0) / acRows.length : null;
-  const reCTR = reRows.length ? reRows.reduce((s, d) => s + d.ctr, 0) / reRows.length : null;
-  const acCTR = acRows.length ? acRows.reduce((s, d) => s + d.ctr, 0) / acRows.length : null;
-
-  const themeMap: Record<string, { opens: number[]; ctrs: number[]; count: number }> = {};
-  rows.forEach(d => {
-    const t = classifyTheme(d.subj);
-    if (!themeMap[t]) themeMap[t] = { opens: [], ctrs: [], count: 0 };
-    themeMap[t].opens.push(d.open);
-    themeMap[t].ctrs.push(d.ctr);
-    themeMap[t].count++;
-  });
-  const themes = Object.entries(themeMap)
-    .map(([theme, v]) => ({
-      theme,
-      avgOpen: v.opens.reduce((a, b) => a + b, 0) / v.opens.length,
-      avgCTR: v.ctrs.reduce((a, b) => a + b, 0) / v.ctrs.length,
-      count: v.count,
-    }))
-    .sort((a, b) => b.avgOpen - a.avgOpen);
-
-  const bestRows = [...rows].sort((a, b) => b.open - a.open).slice(0, 10);
-
-  return (
-    <div className="space-y-6 px-6 py-5">
-      {(reAvg !== null || acAvg !== null) && (
-        <div>
-          <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Segment Comparison</p>
-          <div className="grid grid-cols-2 gap-3">
-            {reAvg !== null && (
-              <div className="rounded-[14px] border border-[#2563EB]/10 bg-[#2563EB]/[0.03] p-4">
-                <div className="text-[22px] font-bold tabular-nums tracking-tight text-[#2563EB]">{reAvg.toFixed(1)}%</div>
-                <div className="mt-0.5 text-[12px] font-semibold text-slate-700">Recent Engagers</div>
-                <div className="text-[12px] text-slate-500">{reRows.length} sends · {reCTR!.toFixed(2)}% CTR</div>
+            <Surface className="rounded-[24px] p-5">
+              <div className="mb-4 text-[18px] font-semibold tracking-[-0.02em] text-slate-900">Best Subject Lines</div>
+              <div className="space-y-2">
+                {bestRows.map((row, index) => {
+                  const tone = openColor(row.open);
+                  return (
+                    <div key={`${row.subj}-${index}`} className="flex items-start gap-3 rounded-[14px] border border-[#eef3fb] bg-[#fafcff] px-4 py-3">
+                      <div className="min-w-[18px] pt-0.5 text-[12px] font-bold text-slate-400">{index + 1}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[12px] font-medium leading-[1.45] text-slate-900">{row.subj}</div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: `${tone}12`, color: tone }}>
+                            {classifyTheme(row.subj)}
+                          </span>
+                          <span className="text-[12px] text-slate-500">{row.week}</span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[13px] font-bold" style={{ color: tone }}>{row.open.toFixed(1)}%</div>
+                        <div className="text-[12px]" style={{ color }}>{row.ctr.toFixed(2)}% CTR</div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
-            {acAvg !== null && (
-              <div className="rounded-[14px] border border-[#7C3AED]/10 bg-[#7C3AED]/[0.03] p-4">
-                <div className="text-[22px] font-bold tabular-nums tracking-tight text-[#7C3AED]">{acAvg.toFixed(1)}%</div>
-                <div className="mt-0.5 text-[12px] font-semibold text-slate-700">All Contacts</div>
-                <div className="text-[12px] text-slate-500">{acRows.length} sends · {acCTR!.toFixed(2)}% CTR</div>
-              </div>
-            )}
+            </Surface>
           </div>
-        </div>
-      )}
-
-      <div>
-        <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Theme Performance</p>
-        <div className="space-y-2">
-          {themes.map((t, i) => (
-            <div key={t.theme} className={`flex items-center gap-3 rounded-[10px] border p-3 ${i === 0 ? "border-slate-900 bg-slate-900" : "border-[#f0f4fb] bg-[#f9fafb]"}`}>
-              <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[5px] text-[12px] font-bold ${i === 0 ? "bg-white/15 text-white" : "bg-[#e2e8f0] text-slate-600"}`}>{i + 1}</div>
-              <div className="flex-1">
-                <div className={`text-[12px] font-semibold ${i === 0 ? "text-white" : "text-slate-900"}`}>{t.theme}</div>
-                <div className={`text-[12px] ${i === 0 ? "text-white/50" : "text-slate-500"}`}>{t.count} sends</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[14px] font-bold tabular-nums" style={{ color: i === 0 ? "#fff" : color }}>{t.avgOpen.toFixed(1)}%</div>
-                <div className={`text-[12px] ${i === 0 ? "text-white/40" : "text-slate-500"}`}>CTR {t.avgCTR.toFixed(2)}%</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-500">Best Subject Lines</p>
-        <div className="space-y-1.5">
-          {bestRows.map((d, i) => {
-            const oc = openColor(d.open);
-            return (
-              <div key={i} className="flex items-start gap-3 rounded-[10px] border border-[#f0f4fb] bg-[#f9fafb] px-4 py-3">
-                <div className="min-w-[18px] pt-0.5 text-[12px] font-bold text-slate-400">{i + 1}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[12px] font-medium leading-[1.4] text-slate-900">{d.subj}</div>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <span className="inline-block rounded-full px-1.5 py-0.5 text-[12px] font-semibold" style={{ background: oc + "12", color: oc }}>{classifyTheme(d.subj)}</span>
-                    <span className="text-[12px] text-slate-500">{d.week}</span>
-                  </div>
-                </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-[13px] font-bold tabular-nums" style={{ color: oc }}>{d.open.toFixed(1)}%</div>
-                  <div className="text-[12px] tabular-nums text-[#2563EB]">{d.ctr.toFixed(2)}% CTR</div>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
     </div>

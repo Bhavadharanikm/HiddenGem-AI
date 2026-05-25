@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Gem,
   MessageSquare,
   BookOpen,
   BarChart2,
   Target,
+  Calculator,
   Settings,
   Mail,
   HelpCircle,
@@ -25,10 +26,9 @@ type Props = {
   selectedClient: Client | null;
   onClientChange: (client: Client) => void;
   onSettingsOpen: () => void;
-  activeView: "chat" | "knowledge" | "performance" | "email";
-  onNavigate: (view: "chat" | "knowledge" | "performance" | "email") => void;
+  activeView: "chat" | "knowledge" | "performance" | "email" | "pricing";
+  onNavigate: (view: "chat" | "knowledge" | "performance" | "email" | "pricing") => void;
   hasKnowledgeBase?: boolean;
-  onFilterApply?: (month: number, year: number) => void;
 };
 
 const NAV_ITEMS = [
@@ -37,6 +37,7 @@ const NAV_ITEMS = [
   { icon: BarChart2, label: "Performance", view: "performance" as const },
   { icon: Mail, label: "Email", view: "email" as const },
   { icon: Target, label: "Campaigns", active: false },
+  { icon: Calculator, label: "Pricing Tool", view: "pricing" as const },
 ];
 
 export default function ConversationSidebar({
@@ -47,7 +48,6 @@ export default function ConversationSidebar({
   activeView,
   onNavigate,
   hasKnowledgeBase = false,
-  onFilterApply,
 }: Props) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpType, setHelpType] = useState<"ticket" | "feedback">("ticket");
@@ -87,7 +87,7 @@ export default function ConversationSidebar({
       {/* Logo section */}
       <div className="px-4 py-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl border border-[rgba(193,209,236,1)] bg-[rgba(41,151,255,0.1)]">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl border border-[rgba(193,209,236,1)] bg-[rgba(47,102,229,0.1)]">
             <Gem size={18} className="text-[var(--brand)]" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col">
@@ -95,6 +95,9 @@ export default function ConversationSidebar({
               className="text-[14px] font-semibold leading-none tracking-[-0.02em] text-slate-900"
             >
               HiddenGem AI
+            </span>
+            <span className="mt-1 text-[12px] font-medium text-slate-500">
+              Welcome Nicole
             </span>
           </div>
         </div>
@@ -111,6 +114,16 @@ export default function ConversationSidebar({
           selected={selectedClient}
           onSelect={onClientChange}
         />
+        <div className="mt-3 flex flex-wrap gap-2 px-2">
+          <span className="inline-flex items-center rounded-full border border-[rgba(47,102,229,0.14)] bg-[rgba(47,102,229,0.06)] px-3 py-1 text-[13px] font-medium text-slate-600">
+            <span className="mr-1 font-semibold text-slate-700">AM:</span>
+            Makenna Moran
+          </span>
+          <span className="inline-flex items-center rounded-full border border-[rgba(47,102,229,0.14)] bg-[rgba(47,102,229,0.06)] px-3 py-1 text-[13px] font-medium text-slate-600">
+            <span className="mr-1 font-semibold text-slate-700">MA:</span>
+            Vicky
+          </span>
+        </div>
       </div>
 
       {/* Divider */}
@@ -137,9 +150,9 @@ export default function ConversationSidebar({
                 }}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-all duration-150",
-                  isInteractive && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
+                  isInteractive && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2",
                   isActive
-                    ? "bg-[var(--brand)] text-white shadow-[0_4px_16px_rgba(41,151,255,0.3)]"
+                    ? "bg-[#2f66e5] text-white shadow-[0_8px_20px_rgba(47,102,229,0.34)]"
                     : isInteractive
                       ? "text-slate-500 hover:bg-white/70 hover:text-slate-800"
                       : "cursor-default text-slate-400 pointer-events-none"
@@ -147,7 +160,7 @@ export default function ConversationSidebar({
               >
                 <div className={cn(
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-                  isActive ? "bg-white/20" : isInteractive ? "bg-[rgba(15,23,42,0.06)]" : "bg-[rgba(15,23,42,0.04)]"
+                  isActive ? "bg-white/16" : isInteractive ? "bg-[rgba(15,23,42,0.06)]" : "bg-[rgba(15,23,42,0.04)]"
                 )}>
                   <Icon
                     size={15}
@@ -155,7 +168,7 @@ export default function ConversationSidebar({
                     className={isActive ? "text-white" : "text-current"}
                   />
                 </div>
-                <span className="text-[12px] font-bold uppercase tracking-[0.08em]">
+                <span className="text-[12px] font-extrabold uppercase tracking-[0.08em]">
                   {item.label}
                 </span>
               </button>
@@ -172,7 +185,7 @@ export default function ConversationSidebar({
         {/* Help */}
         <button
           onClick={() => openHelp("ticket")}
-          className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
+          className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(15,23,42,0.06)]">
             <HelpCircle size={15} strokeWidth={1.75} className="text-current" />
@@ -183,7 +196,7 @@ export default function ConversationSidebar({
         {/* Settings */}
         <button
           onClick={onSettingsOpen}
-          className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2"
+          className="flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left text-slate-500 transition-all hover:bg-white/70 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(15,23,42,0.06)]">
             <Settings size={15} strokeWidth={1.75} className="text-current" />
@@ -200,12 +213,12 @@ export default function ConversationSidebar({
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[rgba(211,223,244,0.92)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(41,151,255,0.1)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(47,102,229,0.1)]">
                   <HelpCircle size={15} className="text-[var(--brand)]" strokeWidth={2} />
                 </div>
                 <span className="text-[14px] font-semibold text-slate-900">Get help</span>
               </div>
-              <button onClick={() => setHelpOpen(false)} aria-label="Close help" className="text-slate-500 hover:text-slate-600 transition-colors rounded-lg p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2">
+              <button onClick={() => setHelpOpen(false)} aria-label="Close help" className="text-slate-500 hover:text-slate-600 transition-colors rounded-lg p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2">
                 <X size={16} />
               </button>
             </div>
@@ -233,10 +246,10 @@ export default function ConversationSidebar({
                         key={type}
                         onClick={() => setHelpType(type)}
                         className={cn(
-                          "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-[12px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
+                          "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-[12px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2",
                           helpType === type
-                            ? "bg-[rgba(41,151,255,0.08)] border-[rgba(41,151,255,0.35)] text-[var(--brand)]"
-                            : "bg-white border-[rgba(211,223,244,0.92)] text-slate-500 hover:border-[rgba(41,151,255,0.25)] hover:text-slate-700"
+                            ? "bg-[rgba(47,102,229,0.08)] border-[rgba(47,102,229,0.35)] text-[var(--brand)]"
+                            : "bg-white border-[rgba(211,223,244,0.92)] text-slate-500 hover:border-[rgba(47,102,229,0.25)] hover:text-slate-700"
                         )}
                       >
                         <Icon size={13} strokeWidth={2} />
@@ -255,7 +268,7 @@ export default function ConversationSidebar({
                       value={helpSubject}
                       onChange={(e) => setHelpSubject(e.target.value)}
                       placeholder={helpType === "ticket" ? "e.g. Sync not working" : "e.g. Feature idea"}
-                      className="w-full rounded-xl border border-[rgba(211,223,244,0.92)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all"
+                      className="w-full rounded-xl border border-[rgba(211,223,244,0.92)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(47,102,229,0.4)] focus:ring-2 focus:ring-[rgba(47,102,229,0.12)] transition-all"
                     />
                   </div>
 
@@ -271,7 +284,7 @@ export default function ConversationSidebar({
                         ? "What were you trying to do? What happened instead?"
                         : "What would make this tool better for you?"}
                       rows={4}
-                      className="w-full rounded-xl border border-[rgba(211,223,244,0.92)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(41,151,255,0.4)] focus:ring-2 focus:ring-[rgba(41,151,255,0.12)] transition-all resize-none leading-relaxed"
+                      className="w-full rounded-xl border border-[rgba(211,223,244,0.92)] bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-500 outline-none focus:border-[rgba(47,102,229,0.4)] focus:ring-2 focus:ring-[rgba(47,102,229,0.12)] transition-all resize-none leading-relaxed"
                     />
                   </div>
 
@@ -282,7 +295,7 @@ export default function ConversationSidebar({
                   <button
                     onClick={submitHelp}
                     disabled={!helpMessage.trim()}
-                    className="flex w-full items-center justify-center gap-2 py-2.5 rounded-xl bg-[var(--brand)] hover:bg-[#1579d6] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.35)] focus-visible:ring-offset-2"
+                    className="flex w-full items-center justify-center gap-2 py-2.5 rounded-xl bg-[var(--brand)] hover:bg-[#1f54cf] disabled:opacity-50 disabled:cursor-not-allowed text-white text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.35)] focus-visible:ring-offset-2"
                   >
                     {helpSending ? <span className="animate-spin inline-block w-3 h-3 border-2 border-white/40 border-t-white rounded-full" /> : <Send size={13} strokeWidth={2} />}
                     {helpType === "ticket" ? "Send support request" : "Send feedback"}

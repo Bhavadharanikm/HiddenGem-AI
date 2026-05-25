@@ -3,7 +3,7 @@
 :root {
   --background: #f4f7fd;
   --foreground: #0f172a;
-  --brand: #2997ff;
+  --brand: #2f66e5;
   --brand-orange: #ff9f0a;
   --brand-green: #30d158;
   --brand-teal: #5ac8fa;
@@ -33,7 +33,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
   background:
-    radial-gradient(circle at top right, rgba(41, 151, 255, 0.12), transparent 32%),
+    radial-gradient(circle at top right, rgba(47, 102, 229, 0.12), transparent 32%),
     radial-gradient(circle at bottom left, rgba(191, 90, 242, 0.09), transparent 28%),
     radial-gradient(circle at 72% 76%, rgba(255, 159, 10, 0.07), transparent 24%),
     #eef4fd;
@@ -41,13 +41,13 @@ body {
 }
 
 ::selection {
-  background: rgba(41, 151, 255, 0.18);
+  background: rgba(47, 102, 229, 0.18);
 }
 
 /* Scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(41, 151, 255, 0.25) transparent;
+  scrollbar-color: rgba(47, 102, 229, 0.25) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -59,7 +59,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(41, 151, 255, 0.22);
+  background: rgba(47, 102, 229, 0.22);
   border-radius: 4px;
 }
 

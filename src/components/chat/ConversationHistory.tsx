@@ -75,13 +75,13 @@ export default function ConversationHistory({
         <span className="text-[12px] font-semibold text-slate-900">
           Conversations
         </span>
-        <span className="ml-2 rounded-full bg-[rgba(41,151,255,0.12)] px-1.5 py-0.5 text-[12px] text-[var(--brand)]">
+        <span className="ml-2 rounded-full bg-[rgba(47,102,229,0.12)] px-1.5 py-0.5 text-[12px] text-[var(--brand)]">
           {conversations.length}
         </span>
         <div className="flex-1" />
         <button
           onClick={onNew}
-          className="flex items-center gap-1.5 rounded-xl bg-[var(--brand)] px-3 py-1.5 text-[12px] font-semibold text-white transition-all hover:bg-[#1579d6] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.45)] focus-visible:ring-offset-2 shadow-[0_1px_4px_rgba(41,151,255,0.35)]"
+          className="flex items-center gap-1.5 rounded-xl bg-[#2f66e5] px-3 py-1.5 text-[12px] font-bold text-white transition-all hover:bg-[#1f54cf] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.45)] focus-visible:ring-offset-2 shadow-[0_8px_20px_rgba(47,102,229,0.3)]"
         >
           <Plus size={12} strokeWidth={2.5} />
           New chat
@@ -99,7 +99,7 @@ export default function ConversationHistory({
         ) : (
           groups.map(({ label, items }) => (
             <div key={label} className="mb-3">
-              <p className="px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-600">
+              <p className="px-3 py-1.5 text-[12px] font-extrabold uppercase tracking-[0.12em] text-slate-700">
                 {label}
               </p>
               <div className="space-y-px">
@@ -112,16 +112,16 @@ export default function ConversationHistory({
                       aria-current={isActive ? "true" : undefined}
                       className={cn(
                         "flex w-full flex-col rounded-xl border px-3 py-2.5 text-left transition-colors",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
                         isActive
-                          ? "border-[rgba(41,151,255,0.18)] bg-[linear-gradient(145deg,rgba(41,151,255,0.12)_0%,rgba(191,90,242,0.08)_100%)] shadow-[0_12px_24px_rgba(41,151,255,0.08)]"
+                          ? "border-[rgba(47,102,229,0.18)] bg-[linear-gradient(145deg,rgba(47,102,229,0.12)_0%,rgba(191,90,242,0.08)_100%)] shadow-[0_12px_24px_rgba(47,102,229,0.08)]"
                           : "border-transparent hover:border-[var(--border)] hover:bg-white/60"
                       )}
                     >
                       <p
                         className={cn(
-                          "text-[12.5px] truncate leading-snug",
-                          isActive ? "text-slate-900" : "text-slate-700 hover:text-slate-900"
+                          "truncate text-[12.5px] leading-snug",
+                          isActive ? "text-black" : "text-black hover:text-black"
                         )}
                       >
                         {convo.title}

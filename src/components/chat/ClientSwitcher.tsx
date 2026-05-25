@@ -21,7 +21,7 @@ function getInitials(name: string): string {
 }
 
 const SWATCH_COLORS = [
-  "bg-[rgba(41,151,255,0.12)] text-[#2997ff] border-[rgba(41,151,255,0.2)]",
+  "bg-[rgba(47,102,229,0.12)] text-[#2f66e5] border-[rgba(47,102,229,0.2)]",
   "bg-[rgba(255,159,10,0.12)] text-[#ff9f0a] border-[rgba(255,159,10,0.2)]",
   "bg-[rgba(48,209,88,0.12)] text-[#30d158] border-[rgba(48,209,88,0.2)]",
   "bg-[rgba(191,90,242,0.12)] text-[#bf5af2] border-[rgba(191,90,242,0.2)]",
@@ -70,7 +70,7 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
         className={cn(
           "flex w-full items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-2 text-left transition-colors",
           "hover:border-[var(--border)] hover:bg-white/60",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
           open && "border-[var(--border)] bg-white/70"
         )}
       >
@@ -144,10 +144,10 @@ export default function ClientSwitcher({ clients, selected, onSelect }: Props) {
                     }}
                     className={cn(
                       "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(41,151,255,0.3)] focus-visible:ring-offset-2",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(47,102,229,0.3)] focus-visible:ring-offset-2",
                       isActive
-                        ? "bg-[rgba(41,151,255,0.08)]"
-                        : "hover:bg-[rgba(41,151,255,0.04)]"
+                        ? "bg-[rgba(47,102,229,0.08)]"
+                        : "hover:bg-[rgba(47,102,229,0.04)]"
                     )}
                   >
                     <div
